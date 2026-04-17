@@ -752,14 +752,8 @@
 
 <script>
 /* ── STATE ── */
-let agents = [
-  {id:1,name:'דנה כהן'},
-  {id:2,name:'יוסי מזרחי'},
-  {id:3,name:'מיכל רוזן'},
-  {id:4,name:'אבי שפירא'},
-  {id:5,name:'נועה לוי'},
-];
-let nextId = 6;
+let agents = [];
+let nextId = 1;
 let editingId = null;
 let barInst = null;
 let donutInst = null;
@@ -1046,22 +1040,32 @@ function openEdit(id) {
   setTimeout(() => document.getElementById('mName').focus(), 50);
 }
 function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
-function saveModal() {
+async function saveModal() {
   const name = document.getElementById('mName').value.trim();
   if (!name) return;
-  if (editingId) {
-    const a = agents.find(x => x.id === editingId);
-    if (a) a.name = name;
-  } else {
-    agents.push({id: nextId++, name});
-  }
+  try {
+    if (editingId) {
+      const a = agents.find(x => x.id === editingId);
+      await supaFetch('agents?id=eq.'+editingId, {method:'PATCH', body:JSON.stringify({name}), prefer:'return=minimal'});
+      if (a) a.name = name;
+    } else {
+      const res = await supaFetch('agents', {method:'POST', body:JSON.stringify({name}), headers:{'Prefer':'return=representation'}});
+      const newId = res && res[0] ? res[0].id : nextId++;
+      agents.push({id: newId, name});
+    }
+  } catch(e) { console.error('saveModal error', e); }
   closeModal();
   renderTable();
+  refreshAgentSelect();
 }
-function deleteAgent(id) {
+async function deleteAgent(id) {
   if (agents.length <= 1) return;
+  try {
+    await supaFetch('agents?id=eq.'+id, {method:'DELETE', prefer:'return=minimal'});
+  } catch(e) { console.error('deleteAgent error', e); }
   agents = agents.filter(a => a.id !== id);
   renderTable();
+  refreshAgentSelect();
 }
 document.getElementById('mName').addEventListener('keydown', e => {
   if (e.key === 'Enter') saveModal();
@@ -1297,9 +1301,56 @@ async function loadStats() {
   }
 }
 
+/* ── AGENTS FROM SUPABASE ── */
+async function loadAgents() {
+  try {
+    const rows = await supaFetch('agents?order=id.asc', {headers:{'Prefer':'return=representation'}});
+    if (rows && rows.length > 0) {
+      agents = rows.map(r => ({id: r.id, name: r.name}));
+      nextId = Math.max(...agents.map(a=>a.id)) + 1;
+    }
+  } catch(e) { console.error('loadAgents error', e); }
+  renderTable();
+  restoreTodayInputs();
+  refreshAgentSelect();
+}
+
+/* ── PERSIST TODAY INPUTS ── */
+function saveTodayInputs() {
+  const data = {
+    goal: document.getElementById('goalInput').value,
+    dailyLeads: document.getElementById('dailyLeads').value,
+    agents: agents.map(a => ({
+      id: a.id,
+      calls: document.getElementById('calls_'+a.id)?.value||'0',
+      hours: document.getElementById('hours_'+a.id)?.value||'0',
+      leads: document.getElementById('leads_'+a.id)?.value||'0',
+      renew: document.getElementById('renew_'+a.id)?.value||'0',
+      hmo:   document.getElementById('hmo_'+a.id)?.value||'0',
+    }))
+  };
+  localStorage.setItem('freefit_today_'+new Date().toISOString().slice(0,10), JSON.stringify(data));
+}
+function restoreTodayInputs() {
+  const saved = localStorage.getItem('freefit_today_'+new Date().toISOString().slice(0,10));
+  if (!saved) return;
+  try {
+    const data = JSON.parse(saved);
+    if (data.goal) document.getElementById('goalInput').value = data.goal;
+    if (data.dailyLeads) document.getElementById('dailyLeads').value = data.dailyLeads;
+    (data.agents||[]).forEach(row => {
+      ['calls','hours','leads','renew','hmo'].forEach(f => {
+        const el = document.getElementById(f+'_'+row.id);
+        if (el) el.value = row[f]||'0';
+      });
+    });
+    calcAll();
+  } catch(e) {}
+}
+document.addEventListener('input', () => saveTodayInputs());
+
 /* ── INIT ── */
-renderTable();
-refreshAgentSelect();
+loadAgents();
 </script>
 </body>
 </html>
