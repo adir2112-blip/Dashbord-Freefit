@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>פריפיט מכירות — דשבורד יומי</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -322,6 +324,25 @@
 </head>
 <body>
 
+<!-- PASSWORD SCREEN -->
+<div id="lockScreen" style="position:fixed;inset:0;background:#f5f5f3;display:flex;align-items:center;justify-content:center;z-index:9999;direction:rtl;">
+  <div style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:16px;padding:2.5rem 2rem;width:340px;text-align:center;">
+    <div style="width:48px;height:48px;background:#185FA5;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:#a5a49e;letter-spacing:.08em;margin-bottom:4px;">פריפיט מכירות</div>
+    <div style="font-size:20px;font-weight:700;color:#1a1a18;margin-bottom:1.5rem;">כניסה למערכת</div>
+    <input type="password" id="pwInput" placeholder="סיסמת מנהל"
+      style="width:100%;padding:10px 14px;font-size:15px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;text-align:center;margin-bottom:10px;background:#fff;color:#1a1a18;"
+      onkeydown="if(event.key==='Enter')checkPw()" />
+    <div id="pwError" style="font-size:12px;color:#E24B4A;margin-bottom:10px;min-height:16px;"></div>
+    <button onclick="checkPw()"
+      style="width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+      כניסה
+    </button>
+  </div>
+</div>
+
 <nav class="app-nav">
   <div class="nav-brand">
     <div class="nav-logo">
@@ -357,7 +378,10 @@
       <h1>הזנת נתוני יום</h1>
       <p id="admin_date"></p>
     </div>
-    <button class="btn btn-primary" onclick="openAdd()">+ הוסף נציג</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn" onclick="resetDay()" style="border-color:#E24B4A;color:#A32D2D;" title="איפוס כל הנתונים ליום חדש">איפוס יומי</button>
+      <button class="btn btn-primary" onclick="openAdd()">+ הוסף נציג</button>
+    </div>
   </div>
 
   <div class="goal-strip">
@@ -379,6 +403,7 @@
           <th style="width:74px">מכירות חידושים</th>
           <th style="width:74px">מכירות ק"ח</th>
           <th style="width:70px">סה"כ מכירות</th>
+          <th style="width:68px">יעד אישי</th>
           <th style="width:62px">פעולות</th>
         </tr>
       </thead>
@@ -462,12 +487,13 @@
       <div class="db-title">דוח ביצועים יומי</div>
     </div>
     <div style="text-align:left">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;"><button class="btn btn-primary" onclick="exportPDF()" style="font-size:12px;padding:5px 12px;">יצוא PDF</button></div>
       <div class="db-date" id="db_date"></div>
       <div class="db-time" id="db_time"></div>
     </div>
   </div>
 
-  <div class="kpi-row">
+  <div id="db_kpi_row" style="position:relative;"><div style="display:flex;justify-content:flex-end;margin-bottom:4px;"><button onclick="downloadCardImage('db_kpi_row','kpi-יומי')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button></div><div class="kpi-row">
     <div class="kpi">
       <div class="kpi-accent" style="background:#185FA5"></div>
       <div class="kpi-lbl">סה"כ מכירות היום</div>
@@ -496,10 +522,10 @@
       <div class="kpi-num" style="font-size:19px;padding-top:5px" id="d_top_name">—</div>
       <div class="kpi-sub" id="d_top_sub">—</div>
     </div>
-  </div>
+  </div></div>
 
   <div class="mid-row">
-    <div class="card">
+    <div class="card" id="db_bar_card">
       <div class="card-hd">
         <div>
           <div class="card-title">השוואת ביצועים בין נציגים</div>
@@ -509,18 +535,20 @@
           <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#185FA5;display:inline-block"></span>לידים</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#1D9E75;display:inline-block"></span>חידושים</span>
           <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#7F77DD;display:inline-block"></span>ק"ח</span>
+          <button onclick="downloadCardImage('db_bar_card','גרף-נציגים')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button>
         </div>
       </div>
       <div style="position:relative;width:100%;height:220px">
         <canvas id="barC" role="img" aria-label="גרף השוואת מכירות בין נציגים">נתוני מכירות לפי נציג</canvas>
       </div>
     </div>
-    <div class="card">
+    <div class="card" id="db_donut_card">
       <div class="card-hd">
         <div>
           <div class="card-title">פילוח מכירות</div>
           <div class="card-sub">לפי מקור</div>
         </div>
+        <button onclick="downloadCardImage('db_donut_card','פילוח-מכירות')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button>
       </div>
       <div style="position:relative;width:100%;height:155px">
         <canvas id="donutC" role="img" aria-label="גרף עוגה פילוח מכירות">פילוח מכירות</canvas>
@@ -529,14 +557,14 @@
     </div>
   </div>
 
-  <div style="margin-bottom:1.25rem;">
+  <div style="margin-bottom:1.25rem;" id="db_agents_table">
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:1rem 1.25rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div class="card-title">דירוג נציגים</div>
           <div class="card-sub">מסודר מהגבוה לנמוך · כולל נתוני פעילות</div>
         </div>
-        <div style="font-size:11px;color:var(--text3);background:var(--bg2);padding:3px 10px;border-radius:99px;border:1px solid var(--border);">עודכן בזמן אמת</div>
+        <div style="display:flex;align-items:center;gap:8px;"><button onclick="downloadCardImage('db_agents_table','טבלת-נציגים')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button><div style="font-size:11px;color:var(--text3);background:var(--bg2);padding:3px 10px;border-radius:99px;border:1px solid var(--border);">עודכן בזמן אמת</div></div>
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -551,6 +579,7 @@
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#085041;border-bottom:1px solid var(--border);white-space:nowrap;">חידושים</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#3C3489;border-bottom:1px solid var(--border);white-space:nowrap;">ק"ח</th>
               <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);white-space:nowrap;">סה"כ מכירות</th>
+              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--amber-tx);border-bottom:1px solid var(--border);white-space:nowrap;">יעד אישי</th>
             </tr>
           </thead>
           <tbody id="agents_list"></tbody>
@@ -561,10 +590,9 @@
 
   <div style="margin-bottom:1.25rem;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;">
     <div style="display:none" id="_placeholder"></div>
-    <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;">
+    <div class="card" id="db_summary_card" style="display:flex;flex-direction:column;justify-content:space-between;">
       <div class="card-hd" style="margin-bottom:.5rem">
-        <div class="card-title">סיכום יומי</div>
-        <div class="card-sub">כל המדדים במבט אחד</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;"><div><div class="card-title">סיכום יומי</div><div class="card-sub">כל המדדים במבט אחד</div></div><button onclick="downloadCardImage('db_summary_card','סיכום-יומי')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button></div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
@@ -751,6 +779,27 @@
 </div>
 
 <script>
+/* ── PASSWORD ── */
+const CORRECT_PW = 'Q1w2e3r4!';
+function checkPw() {
+  const val = document.getElementById('pwInput').value;
+  if (val === CORRECT_PW) {
+    document.getElementById('lockScreen').style.display = 'none';
+    localStorage.setItem('freefit_auth', btoa(CORRECT_PW));
+  } else {
+    document.getElementById('pwError').textContent = 'סיסמה שגויה, נסה שוב';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+(function() {
+  const saved = localStorage.getItem('freefit_auth');
+  if (saved && atob(saved) === CORRECT_PW) {
+    const ls = document.getElementById('lockScreen');
+    if (ls) ls.style.display = 'none';
+  }
+})();
+
 /* ── SUPABASE CONFIG ── */
 const SUPA_URL = 'https://fmejfxejsrmjvexfizgj.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtZWpmeGVqc3JtanZleGZpemdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjA1MjQsImV4cCI6MjA5MTkzNjUyNH0.A8Eu-3Uj-i06U0DsDt-pbGu1tQJXdjZaTyz797PsOEU';
@@ -846,6 +895,14 @@ function calcAll() {
   document.getElementById('s_total').textContent = sTotal || '—';
   document.getElementById('s_cph').textContent   = avgCph;
   document.getElementById('s_cph_note').textContent = cphCnt > 0 ? 'ממוצע' : '';
+
+  // ── ALERT DOTS — below team average ──
+  const avgSales = agents.length > 0 ? sTotal / agents.length : 0;
+  agents.forEach(a => {
+    const tot = gv(a.id,'leads') + gv(a.id,'renew') + gv(a.id,'hmo');
+    const alertEl = document.getElementById('alert_'+a.id);
+    if (alertEl) alertEl.style.display = (tot < avgSales && sTotal > 0) ? 'inline-block' : 'none';
+  });
 
   const dailyLeads = parseFloat(document.getElementById('dailyLeads').value) || 0;
   const closeRate  = dailyLeads > 0 ? ((sLeads/dailyLeads)*100).toFixed(1)+'%' : '—';
@@ -979,6 +1036,7 @@ function updateCharts(sorted, sLeads, sRenew, sHmo, sTotal) {
     {bg:'#FAECE7', tx:'#993C1D'},
   ];
 
+  const avgSalesTeam = sorted.length > 0 ? sorted.reduce((s,a)=>s+a.total,0)/sorted.length : 0;
   sorted.forEach((a, i) => {
     const avBg   = AVATARBG[i % AVATARBG.length];
     const avTx   = AVATARTX[i % AVATARTX.length];
@@ -994,13 +1052,24 @@ function updateCharts(sorted, sLeads, sRenew, sHmo, sTotal) {
     const totalStyle = isFirst ? 'color:#854F0B;font-weight:700;font-size:15px;' : 'font-weight:700;font-size:15px;color:var(--blue);';
     const cphStyle = hoursV > 0 ? (parseFloat(cph)>=10?'color:var(--green-tx);font-weight:600;':'') : 'color:var(--text3);';
 
+    const personalGoal = gv(a.id,'goal');
+    const goalPct = personalGoal > 0 ? Math.min(Math.round(a.total/personalGoal*100),100) : null;
+    const goalColor = goalPct===null?'var(--text3)':goalPct>=100?'#3B6D11':goalPct>=70?'#185FA5':'#BA7517';
+    const goalCell = personalGoal > 0
+      ? `<div style="font-size:12px;font-weight:700;color:${goalColor};">${goalPct}%</div>
+         <div style="height:3px;background:var(--bg3);border-radius:99px;margin-top:3px;width:48px;overflow:hidden;">
+           <div style="height:3px;width:${goalPct}%;background:${goalColor};border-radius:99px;"></div>
+         </div>`
+      : `<span style="font-size:11px;color:var(--text3);">—</span>`;
+    const belowAvg = a.total < avgSalesTeam && sTotal > 0;
+    const alertBadge = belowAvg ? `<span style="width:8px;height:8px;border-radius:50%;background:#E24B4A;display:inline-block;margin-right:4px;" title="מתחת לממוצע הצוות"></span>` : '';
     al.innerHTML += `<tr style="${rowStyle}border-bottom:1px solid var(--border);">
       <td style="padding:10px 14px;text-align:right;">${rankCell}</td>
       <td style="padding:10px 14px;text-align:right;">
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="width:30px;height:30px;border-radius:50%;background:${avBg};color:${avTx};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${initials(a.name)}</div>
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;">${badge}${a.name}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;">${alertBadge}${badge}${a.name}</div>
           </div>
         </div>
       </td>
@@ -1011,6 +1080,7 @@ function updateCharts(sorted, sLeads, sRenew, sHmo, sTotal) {
       <td style="padding:10px;text-align:center;"><span style="background:#E1F5EE;color:#085041;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${renewV}</span></td>
       <td style="padding:10px;text-align:center;"><span style="background:#EEEDFE;color:#3C3489;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${hmoV}</span></td>
       <td style="padding:10px 14px;text-align:center;${totalStyle}">${a.total}</td>
+      <td style="padding:10px 14px;text-align:center;">${goalCell}</td>
     </tr>`;
   });
 }
@@ -1022,7 +1092,7 @@ function renderTable() {
   agents.forEach(a => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${a.name}</td>
+      <td><div style="display:flex;align-items:center;gap:6px;">${a.name}<span id="alert_${a.id}" style="display:none;width:8px;height:8px;border-radius:50%;background:#E24B4A;flex-shrink:0;" title="מתחת לממוצע הצוות"></span></div></td>
       <td><input class="num-input" type="number" min="0" id="calls_${a.id}" value="0" oninput="calcRow(${a.id})" /></td>
       <td><input class="num-input" type="number" min="0" step="0.5" id="hours_${a.id}" value="0" oninput="calcRow(${a.id})" /></td>
       <td class="calc-cell" id="cph_${a.id}">—</td>
@@ -1030,6 +1100,7 @@ function renderTable() {
       <td><input class="num-input" type="number" min="0" id="renew_${a.id}" value="0" oninput="calcRow(${a.id})" /></td>
       <td><input class="num-input" type="number" min="0" id="hmo_${a.id}" value="0" oninput="calcRow(${a.id})" /></td>
       <td class="total-cell" id="total_${a.id}">0</td>
+      <td><input class="num-input" type="number" min="0" id="goal_${a.id}" value="${a.goal||0}" oninput="calcAll()" style="width:56px;" placeholder="יעד" /></td>
       <td><div class="actions">
         <button class="btn-icon" title="עריכה" onclick="openEdit(${a.id})">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z"/></svg>
@@ -1327,9 +1398,55 @@ function saveTodayInputs() {
       leads: document.getElementById('leads_'+a.id)?.value||'0',
       renew: document.getElementById('renew_'+a.id)?.value||'0',
       hmo:   document.getElementById('hmo_'+a.id)?.value||'0',
+      goal:  document.getElementById('goal_'+a.id)?.value||'0',
     }))
   };
   localStorage.setItem('freefit_today_'+new Date().toISOString().slice(0,10), JSON.stringify(data));
+}
+
+
+/* ── DOWNLOAD CARD AS IMAGE ── */
+async function downloadCardImage(elId, filename) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const canvas = await html2canvas(el, {scale:2, useCORS:true, backgroundColor:'#ffffff'});
+  const link = document.createElement('a');
+  link.download = filename + '-' + new Date().toLocaleDateString('he-IL').replace(/\//g,'-') + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+/* ── RESET DAY ── */
+function resetDay() {
+  if (!confirm('לאפס את כל הנתונים של היום? הפעולה לא ניתנת לביטול.')) return;
+  agents.forEach(a => {
+    ['calls','hours','leads','renew','hmo'].forEach(f => {
+      const el = document.getElementById(f+'_'+a.id);
+      if (el) el.value = '0';
+    });
+  });
+  const dlEl = document.getElementById('dailyLeads');
+  if (dlEl) dlEl.value = '0';
+  localStorage.removeItem('freefit_today_'+new Date().toISOString().slice(0,10));
+  calcAll();
+}
+
+/* ── EXPORT PDF ── */
+async function exportPDF() {
+  const btn = document.querySelector('[onclick="exportPDF()"]');
+  const origText = btn.textContent;
+  btn.textContent = 'מכין...'; btn.disabled = true;
+  try {
+    const el = document.getElementById('page-dashboard');
+    const canvas = await html2canvas(el, {scale:1.5, useCORS:true, backgroundColor:'#ffffff'});
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({orientation:'landscape', unit:'px', format:[canvas.width/1.5, canvas.height/1.5]});
+    pdf.addImage(imgData,'PNG',0,0,canvas.width/1.5,canvas.height/1.5);
+    const today = new Date().toLocaleDateString('he-IL').replace(/\//g,'-');
+    pdf.save('פריפיט-דשבורד-'+today+'.pdf');
+  } catch(e) { alert('שגיאה ביצוא: '+e.message); }
+  btn.textContent = origText; btn.disabled = false;
 }
 function restoreTodayInputs() {
   const saved = localStorage.getItem('freefit_today_'+new Date().toISOString().slice(0,10));
@@ -1339,7 +1456,7 @@ function restoreTodayInputs() {
     if (data.goal) document.getElementById('goalInput').value = data.goal;
     if (data.dailyLeads) document.getElementById('dailyLeads').value = data.dailyLeads;
     (data.agents||[]).forEach(row => {
-      ['calls','hours','leads','renew','hmo'].forEach(f => {
+      ['calls','hours','leads','renew','hmo','goal'].forEach(f => {
         const el = document.getElementById(f+'_'+row.id);
         if (el) el.value = row[f]||'0';
       });
