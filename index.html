@@ -751,6 +751,26 @@
 </div>
 
 <script>
+/* ── SUPABASE CONFIG ── */
+const SUPA_URL = 'https://fmejfxejsrmjvexfizgj.supabase.co';
+const SUPA_KEY = 'sb_publishable_bnIbhoo3IlOvs_7Kod3gOg_owgA9tQg';
+
+async function supaFetch(path, opts={}) {
+  const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=minimal',
+      ...opts.headers
+    },
+    ...opts
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(t); }
+  const ct = res.headers.get('content-type')||'';
+  return ct.includes('json') ? res.json() : null;
+}
+
 /* ── STATE ── */
 let agents = [];
 let nextId = 1;
@@ -1076,22 +1096,6 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 });
 
 
-/* ── SUPABASE CONFIG ── */
-const SUPA_URL = 'https://fmejfxejsrmjvexfizgj.supabase.co';
-const SUPA_KEY = 'sb_publishable_bnIbhoo3IlOvs_7Kod3gOg_owgA9tQg';
-
-async function supaFetch(path, opts={}) {
-  const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': opts.prefer || 'return=minimal',
-      ...opts.headers
-    },
-    ...opts
-  });
-  if (!res.ok) { const t = await res.text(); throw new Error(t); }
   const ct = res.headers.get('content-type')||'';
   return ct.includes('json') ? res.json() : null;
 }
