@@ -523,6 +523,9 @@
       </tbody>
     </table>
   </div>
+<div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;letter-spacing:.01em;">
+  כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026
+</div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -697,6 +700,9 @@
     <span>פריפיט מכירות · דוח יומי · סודי</span>
     <span style="display:flex;align-items:center;gap:6px"><span class="live-dot"></span>נתונים מסונכרנים בזמן אמת</span>
   </div>
+  <div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;letter-spacing:.01em;">
+  כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026
+</div>
 </div>
 
 
@@ -812,6 +818,9 @@
       </div>
     </div>
   </div>
+  <div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;letter-spacing:.01em;">
+  כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026
+</div>
 </div>
 
 <!-- MODAL -->
@@ -834,7 +843,7 @@ function checkPw() {
   const val = document.getElementById('pwInput').value;
   if (val === CORRECT_PW) {
     document.getElementById('lockScreen').style.display = 'none';
-    localStorage.setItem('freefit_auth', btoa(CORRECT_PW));
+    sessionStorage.setItem('freefit_auth', btoa(CORRECT_PW));
   } else {
     document.getElementById('pwError').textContent = 'סיסמה שגויה, נסה שוב';
     document.getElementById('pwInput').value = '';
@@ -842,10 +851,15 @@ function checkPw() {
   }
 }
 (function() {
-  const saved = localStorage.getItem('freefit_auth');
+  const saved = sessionStorage.getItem('freefit_auth');
   if (saved && atob(saved) === CORRECT_PW) {
     const ls = document.getElementById('lockScreen');
     if (ls) ls.style.display = 'none';
+  } else {
+    // force show lock screen
+    const ls = document.getElementById('lockScreen');
+    if (ls) ls.style.display = 'flex';
+    setTimeout(() => { const pi = document.getElementById('pwInput'); if(pi) pi.focus(); }, 100);
   }
 })();
 
@@ -1132,6 +1146,31 @@ function updateCharts(sorted, sLeads, sRenew, sHmo, sTotal) {
       <td style="padding:10px 14px;text-align:center;">${goalCell}</td>
     </tr>`;
   });
+
+  // ── TOTALS ROW ──
+  const totalCalls = agents.reduce((s,a)=>s+gv(a.id,'calls'),0);
+  const totalHours = agents.reduce((s,a)=>s+gv(a.id,'hours'),0);
+  const totalLeads = agents.reduce((s,a)=>s+gv(a.id,'leads'),0);
+  const totalRenew = agents.reduce((s,a)=>s+gv(a.id,'renew'),0);
+  const totalHmo   = agents.reduce((s,a)=>s+gv(a.id,'hmo'),0);
+  const totalSales = totalLeads + totalRenew + totalHmo;
+  const avgCphAll  = totalHours > 0 ? (totalCalls/totalHours).toFixed(1) : '—';
+  al.innerHTML += `<tr style="background:var(--bg2);border-top:2px solid var(--border2);">
+    <td style="padding:10px 14px;text-align:right;" colspan="2">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--blue-bg);color:var(--blue-tx);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">∑</div>
+        <span style="font-size:13px;font-weight:700;color:var(--text);">סיכום צוות</span>
+      </div>
+    </td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text);">${totalCalls||'—'}</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text);">${totalHours||'—'}</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--blue);">${avgCphAll}</td>
+    <td style="padding:10px;text-align:center;"><span style="background:#E6F1FB;color:#0C447C;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${totalLeads}</span></td>
+    <td style="padding:10px;text-align:center;"><span style="background:#E1F5EE;color:#085041;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${totalRenew}</span></td>
+    <td style="padding:10px;text-align:center;"><span style="background:#EEEDFE;color:#3C3489;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${totalHmo}</span></td>
+    <td style="padding:10px 14px;text-align:center;font-size:16px;font-weight:800;color:var(--blue);">${totalSales}</td>
+    <td style="padding:10px 14px;text-align:center;font-size:11px;color:var(--text3);">—</td>
+  </tr>`;
 }
 
 /* ── TABLE RENDER ── */
@@ -1484,17 +1523,34 @@ function resetDay() {
 async function exportPDF() {
   const btn = document.querySelector('[onclick="exportPDF()"]');
   const origText = btn.textContent;
-  btn.textContent = 'מכין...'; btn.disabled = true;
+  btn.textContent = 'מכין PDF...'; btn.disabled = true;
   try {
     const el = document.getElementById('page-dashboard');
-    const canvas = await html2canvas(el, {scale:1.5, useCORS:true, backgroundColor:'#ffffff'});
+    const fullH = el.scrollHeight;
+    const fullW = el.scrollWidth;
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#f0efe9',
+      width: fullW,
+      height: fullH,
+      windowWidth: fullW,
+      windowHeight: fullH,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
+      logging: false
+    });
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({orientation:'landscape', unit:'px', format:[canvas.width/1.5, canvas.height/1.5]});
-    pdf.addImage(imgData,'PNG',0,0,canvas.width/1.5,canvas.height/1.5);
-    const today = new Date().toLocaleDateString('he-IL').replace(/\//g,'-');
-    pdf.save('פריפיט-דשבורד-'+today+'.pdf');
-  } catch(e) { alert('שגיאה ביצוא: '+e.message); }
+    const pdfW = 297;
+    const pdfH = Math.round((canvas.height / canvas.width) * pdfW);
+    const pdf = new jsPDF({ orientation: pdfH > pdfW ? 'portrait' : 'landscape', unit: 'mm', format: [pdfW, pdfH] });
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH, '', 'FAST');
+    const today = new Date().toLocaleDateString('he-IL').replace(/\//g, '-');
+    pdf.save('פריפיט-דשבורד-' + today + '.pdf');
+  } catch(e) { alert('שגיאה ביצוא PDF: ' + e.message); }
   btn.textContent = origText; btn.disabled = false;
 }
 function restoreTodayInputs() {
