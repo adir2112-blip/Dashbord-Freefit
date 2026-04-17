@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl" data-v="2">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,7 +8,6 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
- 
   :root {
     --bg: #ffffff;
     --bg2: #f5f5f3;
@@ -757,18 +756,18 @@ const SUPA_URL = 'https://fmejfxejsrmjvexfizgj.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtZWpmeGVqc3JtanZleGZpemdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjA1MjQsImV4cCI6MjA5MTkzNjUyNH0.A8Eu-3Uj-i06U0DsDt-pbGu1tQJXdjZaTyz797PsOEU';
 
 async function supaFetch(path, opts={}) {
-  const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': opts.prefer || 'return=minimal',
-      ...opts.headers
-    },
-    ...opts
-  });
+  const method  = opts.method  || 'GET';
+  const body    = opts.body    || undefined;
+  const prefer  = opts.prefer  || 'return=minimal';
+  const headers = {
+    'apikey':        SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type':  'application/json',
+    'Prefer':        prefer,
+  };
+  const res = await fetch(SUPA_URL + '/rest/v1/' + path, { method, headers, body });
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
-  const ct = res.headers.get('content-type')||'';
+  const ct = res.headers.get('content-type') || '';
   return ct.includes('json') ? res.json() : null;
 }
 
