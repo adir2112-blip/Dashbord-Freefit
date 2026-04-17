@@ -432,7 +432,11 @@
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <button class="btn" onclick="resetDay()" style="border-color:#E24B4A;color:#A32D2D;" title="איפוס כל הנתונים ליום חדש">איפוס יומי</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+      <span id="autosave_indicator" style="font-size:11px;color:var(--green-tx);opacity:0;transition:opacity .4s;"></span>
+      <button class="btn" onclick="resetDay()" style="border-color:#E24B4A;color:#A32D2D;">איפוס יומי</button>
       <button class="btn btn-primary" onclick="openAdd()">+ הוסף נציג</button>
+    </div>
     </div>
   </div>
 
@@ -750,6 +754,22 @@
     </div>
   </div>
 
+  <div style="background:var(--red-bg);border:1px solid rgba(163,45,45,.2);border-radius:var(--radius);padding:.8rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="2" style="flex-shrink:0"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+    <span style="font-size:13px;font-weight:600;color:var(--red-tx);flex:1;">מחיקת נתונים היסטוריים לנציג</span>
+    <select id="delete_agent_sel" style="padding:6px 10px;font-size:13px;border:1px solid rgba(163,45,45,.3);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);">
+      <option value="">בחר נציג למחיקה...</option>
+    </select>
+    <select id="delete_range_sel" style="padding:6px 10px;font-size:13px;border:1px solid rgba(163,45,45,.3);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);">
+      <option value="all">כל הנתונים</option>
+      <option value="month">חודש אחרון</option>
+      <option value="week">שבוע אחרון</option>
+      <option value="today">היום בלבד</option>
+    </select>
+    <button onclick="deleteAgentData()" style="padding:6px 14px;font-size:13px;font-weight:600;background:#A32D2D;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;">מחק</button>
+    <span id="delete_status" style="font-size:11px;color:var(--red-tx);min-width:80px;"></span>
+  </div>
+
   <div id="stats_loading" style="display:none;text-align:center;padding:3rem;color:var(--text3);font-size:14px;">טוען נתונים...</div>
   <div id="stats_empty" style="display:none;text-align:center;padding:3rem;">
     <div style="font-size:32px;margin-bottom:12px;">📊</div>
@@ -1016,7 +1036,14 @@ function doSwitchTab(tab) {
   if (tab === 'stats') { refreshAgentSelect(); loadStats(); }
   if (tab === 'weekly') loadWeekly();
   if (tab === 'goals') renderGoals();
-  if (tab === 'tv') { updateTV(); setInterval(()=>{if(document.getElementById('page-tv').classList.contains('active'))updateTV();},30000); }
+  if (tab === 'tv') {
+    updateTVFromSupabase();
+    if(!window._tvPollInterval) {
+      window._tvPollInterval = setInterval(()=>{
+        if(document.getElementById('page-tv').classList.contains('active')) updateTVFromSupabase();
+      }, 300000);
+    }
+  }
 }
 
 // On load: start on TV (no auth needed)
@@ -1488,6 +1515,61 @@ function refreshAgentSelect() {
     if (a.name === cur) opt.selected = true;
     sel.appendChild(opt);
   });
+  // Also populate delete agent select
+  const delSel = document.getElementById('delete_agent_sel');
+  if (delSel) {
+    const curDel = delSel.value;
+    delSel.innerHTML = '<option value="">בחר נציג למחיקה...</option>';
+    agents.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.name; opt.textContent = a.name;
+      if (a.name === curDel) opt.selected = true;
+      delSel.appendChild(opt);
+    });
+  }
+}
+
+/* ── DELETE AGENT DATA ── */
+async function deleteAgentData() {
+  const agentName = document.getElementById('delete_agent_sel').value;
+  const range     = document.getElementById('delete_range_sel').value;
+  const statusEl  = document.getElementById('delete_status');
+  if (!agentName) { statusEl.textContent = 'בחר נציג תחילה'; return; }
+
+  const confirmMsg = range === 'all'
+    ? `למחוק את כל הנתונים של ${agentName}?`
+    : `למחוק נתוני ${range === 'today' ? 'היום' : range === 'week' ? 'שבוע אחרון' : 'חודש אחרון'} של ${agentName}?`;
+
+  if (!confirm(confirmMsg)) return;
+
+  statusEl.textContent = 'מוחק...';
+  try {
+    const today = new Date();
+    let fromDate = '';
+    if (range === 'today') {
+      fromDate = today.toISOString().slice(0,10);
+    } else if (range === 'week') {
+      const d = new Date(today); d.setDate(d.getDate()-6);
+      fromDate = d.toISOString().slice(0,10);
+    } else if (range === 'month') {
+      const d = new Date(today); d.setDate(d.getDate()-29);
+      fromDate = d.toISOString().slice(0,10);
+    }
+
+    let path = 'daily_stats?agent_name=eq.'+encodeURIComponent(agentName);
+    if (fromDate) path += '&date=gte.'+fromDate;
+
+    await supaFetch(path, {method:'DELETE'});
+    statusEl.textContent = '✓ נמחק בהצלחה';
+    statusEl.style.color = 'var(--green-tx)';
+    setTimeout(() => { statusEl.textContent = ''; statusEl.style.color = 'var(--red-tx)'; }, 3000);
+
+    // Reload stats if same agent is shown
+    const statsSel = document.getElementById('stats_agent');
+    if (statsSel && statsSel.value === agentName) loadStats();
+  } catch(e) {
+    statusEl.textContent = 'שגיאה: ' + e.message.slice(0,40);
+  }
 }
 
 /* ── LOAD STATS ── */
@@ -1671,21 +1753,18 @@ async function loadWeekly() {
   document.getElementById('weekly_date').textContent = now.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   document.getElementById('weekly_time_badge').textContent = 'עודכן: '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
 
+  // Find Sunday of current week (week starts Sunday in Israel)
   const days = [];
-  for (let i=4; i>=0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate()-i);
-    const dow = d.getDay();
-    if (dow===5||dow===6) continue;
+  const weekStart = new Date(now);
+  const dow = weekStart.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  // If Saturday (6), go back to Sunday; otherwise go back to this week's Sunday
+  weekStart.setDate(weekStart.getDate() - (dow === 6 ? 6 : dow));
+  weekStart.setHours(0,0,0,0);
+  // Add Sun(0) Mon(1) Tue(2) Wed(3) Thu(4)
+  for (let i=0; i<5; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate()+i);
     days.push(d.toISOString().slice(0,10));
-  }
-  if (days.length<5) {
-    for (let i=days.length; days.length<5;) {
-      const d = new Date(now);
-      d.setDate(d.getDate()-(++i+4));
-      const dow = d.getDay();
-      if (dow!==5&&dow!==6) days.unshift(d.toISOString().slice(0,10));
-    }
   }
 
   let allRows = [];
@@ -1877,6 +1956,36 @@ async function renderGoals() {
 }
 
 /* ── TV MODE ── */
+async function updateTVFromSupabase() {
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const rows = await supaFetch('daily_stats?date=eq.'+today, {headers:{'Prefer':'return=representation'}});
+    if (rows && rows.length > 0) {
+      const goal = parseInt(document.getElementById('goalInput').value)||30;
+      const dailyLeads = rows.reduce((s,r)=>s+r.daily_leads,0);
+      // Update agent inputs from Supabase data
+      agents.forEach(a => {
+        const r = rows.find(x=>x.agent_name===a.name);
+        if(!r) return;
+        ['calls','hours','leads','renew','hmo'].forEach(f => {
+          const map={calls:'calls',hours:'hours',leads:'leads',renew:'renewals',hmo:'hmo'};
+          const el = document.getElementById(f+'_'+a.id);
+          if(el && parseFloat(el.value)===0) el.value = r[map[f]]||0;
+        });
+        const dlEl = document.getElementById('dailyLeads');
+        if(dlEl && parseFloat(dlEl.value)===0 && dailyLeads>0) dlEl.value = dailyLeads;
+      });
+    }
+  } catch(e) { console.warn('TV fetch error',e); }
+  updateTV();
+  showTVRefreshTime();
+}
+
+function showTVRefreshTime() {
+  const el = document.getElementById('tv_time');
+  if(el) el.textContent = 'עודכן: '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) + ' · רענון כל 5 דקות';
+}
+
 function updateTV() {
   let sCalls=0,sHours=0,sLeads=0,sRenew=0,sHmo=0,cphSum=0,cphCnt=0;
   agents.forEach(a=>{
@@ -1972,6 +2081,35 @@ function saveTodayInputs() {
     }))
   };
   localStorage.setItem('freefit_today_'+new Date().toISOString().slice(0,10), JSON.stringify(data));
+  debouncedSupaSave();
+}
+
+let _supaDebounce = null;
+function debouncedSupaSave() {
+  clearTimeout(_supaDebounce);
+  _supaDebounce = setTimeout(async () => {
+    try {
+      const today = new Date().toISOString().slice(0,10);
+      const dailyLeads = parseInt(document.getElementById('dailyLeads').value)||0;
+      await supaFetch('daily_stats?date=eq.'+today, {method:'DELETE'});
+      const rows = agents.map(a => ({
+        date: today,
+        agent_name: a.name,
+        calls:       parseInt(document.getElementById('calls_'+a.id)?.value)||0,
+        hours:       parseFloat(document.getElementById('hours_'+a.id)?.value)||0,
+        leads:       parseInt(document.getElementById('leads_'+a.id)?.value)||0,
+        renewals:    parseInt(document.getElementById('renew_'+a.id)?.value)||0,
+        hmo:         parseInt(document.getElementById('hmo_'+a.id)?.value)||0,
+        total_sales:(parseInt(document.getElementById('leads_'+a.id)?.value)||0)+
+                    (parseInt(document.getElementById('renew_'+a.id)?.value)||0)+
+                    (parseInt(document.getElementById('hmo_'+a.id)?.value)||0),
+        daily_leads: dailyLeads
+      }));
+      await supaFetch('daily_stats', {method:'POST', body:JSON.stringify(rows), prefer:'return=minimal'});
+      const ind = document.getElementById('autosave_indicator');
+      if(ind){ ind.textContent='✓ נשמר אוטומטית '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',3000); }
+    } catch(e) { console.warn('autosave error',e); }
+  }, 2000);
 }
 
 
