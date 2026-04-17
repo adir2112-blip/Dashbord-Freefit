@@ -370,28 +370,6 @@
     .nav-tab { padding: 10px 14px; font-size: 12px; }
   }
 </style>
-<script>
-function checkPw() {
-  var val = document.getElementById('pwInput').value;
-  var CORRECT = 'Q1w2e3r4!';
-  if (val === CORRECT) {
-    sessionStorage.setItem('freefit_auth', btoa(CORRECT));
-    document.getElementById('lockScreen').style.display = 'none';
-    var pending = sessionStorage.getItem('pending_tab') || 'tv';
-    sessionStorage.removeItem('pending_tab');
-    if (typeof doSwitchTab === 'function') doSwitchTab(pending);
-    else setTimeout(function(){ if(typeof doSwitchTab==='function') doSwitchTab(pending); }, 500);
-  } else {
-    document.getElementById('pwError').textContent = 'סיסמה שגויה, נסה שוב';
-    document.getElementById('pwInput').value = '';
-    document.getElementById('pwInput').focus();
-  }
-}
-document.addEventListener('keydown', function(e){
-  if (e.key === 'Enter' && document.getElementById('lockScreen') &&
-      document.getElementById('lockScreen').style.display !== 'none') checkPw();
-});
-</script>
 </head>
 <body>
 
@@ -404,11 +382,11 @@ document.addEventListener('keydown', function(e){
     <div style="font-size:11px;font-weight:600;color:#a5a49e;letter-spacing:.08em;margin-bottom:4px;">פריפיט מכירות</div>
     <div style="font-size:22px;font-weight:800;color:#111110;margin-bottom:1.5rem;letter-spacing:-.03em;">כניסה למערכת</div>
     <input type="password" id="pwInput" placeholder="סיסמת מנהל"
+      onkeydown="if(event.key==='Enter')checkPw()"
       style="width:100%;padding:10px 14px;font-size:15px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;text-align:center;margin-bottom:10px;background:#fff;color:#1a1a18;"
       onkeydown="if(event.key==='Enter')checkPw()" />
     <div id="pwError" style="font-size:12px;color:#E24B4A;margin-bottom:10px;min-height:16px;"></div>
-    <button onclick="checkPw()"
-      style="width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+    <button id="pw_btn" onclick="checkPw()" style="width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
       כניסה
     </button>
   </div>
@@ -1421,28 +1399,6 @@ document.addEventListener('keydown', function(e){
     .nav-tab { padding: 10px 14px; font-size: 12px; }
   }
 </style>
-<script>
-function checkPw() {
-  var val = document.getElementById('pwInput').value;
-  var CORRECT = 'Q1w2e3r4!';
-  if (val === CORRECT) {
-    sessionStorage.setItem('freefit_auth', btoa(CORRECT));
-    document.getElementById('lockScreen').style.display = 'none';
-    var pending = sessionStorage.getItem('pending_tab') || 'tv';
-    sessionStorage.removeItem('pending_tab');
-    if (typeof doSwitchTab === 'function') doSwitchTab(pending);
-    else setTimeout(function(){ if(typeof doSwitchTab==='function') doSwitchTab(pending); }, 500);
-  } else {
-    document.getElementById('pwError').textContent = 'סיסמה שגויה, נסה שוב';
-    document.getElementById('pwInput').value = '';
-    document.getElementById('pwInput').focus();
-  }
-}
-document.addEventListener('keydown', function(e){
-  if (e.key === 'Enter' && document.getElementById('lockScreen') &&
-      document.getElementById('lockScreen').style.display !== 'none') checkPw();
-});
-</script>
 </head>
 <body>
 
@@ -1455,11 +1411,11 @@ document.addEventListener('keydown', function(e){
     <div style="font-size:11px;font-weight:600;color:#a5a49e;letter-spacing:.08em;margin-bottom:4px;">פריפיט מכירות</div>
     <div style="font-size:22px;font-weight:800;color:#111110;margin-bottom:1.5rem;letter-spacing:-.03em;">כניסה למערכת</div>
     <input type="password" id="pwInput" placeholder="סיסמת מנהל"
+      onkeydown="if(event.key==='Enter')checkPw()"
       style="width:100%;padding:10px 14px;font-size:15px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;text-align:center;margin-bottom:10px;background:#fff;color:#1a1a18;"
       onkeydown="if(event.key==='Enter')checkPw()" />
     <div id="pwError" style="font-size:12px;color:#E24B4A;margin-bottom:10px;min-height:16px;"></div>
-    <button onclick="checkPw()"
-      style="width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+    <button id="pw_btn" onclick="checkPw()" style="width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
       כניסה
     </button>
   </div>
@@ -2108,11 +2064,27 @@ document.addEventListener('keydown', function(e){
 </div>
 
 <script>
-/* ── PASSWORD ── */
-const CORRECT_PW = 'Q1w2e3r4!';
-function isAuthed() { const s=sessionStorage.getItem('freefit_auth'); return s && atob(s)===CORRECT_PW; }
-
-/* checkPw defined early in <head> for immediate availability */
+/* ── PASSWORD — defined FIRST so button works even if rest of script fails ── */
+window.CORRECT_PW = 'Q1w2e3r4!';
+window.isAuthed = function() { try { const s=sessionStorage.getItem('freefit_auth'); return s && atob(s)===window.CORRECT_PW; } catch(e){return false;} };
+window.checkPw = function() {
+  const val = document.getElementById('pwInput').value;
+  if (val === window.CORRECT_PW) {
+    try { sessionStorage.setItem('freefit_auth', btoa(window.CORRECT_PW)); } catch(e){}
+    document.getElementById('lockScreen').style.display = 'none';
+    const pending = sessionStorage.getItem('pending_tab') || 'tv';
+    sessionStorage.removeItem('pending_tab');
+    if (typeof doSwitchTab === 'function') doSwitchTab(pending);
+  } else {
+    const errEl = document.getElementById('pwError');
+    if (errEl) errEl.textContent = 'סיסמה שגויה, נסה שוב';
+    const inp = document.getElementById('pwInput');
+    if (inp) { inp.value = ''; inp.focus(); }
+  }
+};
+var CORRECT_PW = window.CORRECT_PW;
+var isAuthed = window.isAuthed;
+var checkPw = window.checkPw;
 
 function requireAuth(tab) {
   if (tab === 'tv') { doSwitchTab('tv'); return; }
