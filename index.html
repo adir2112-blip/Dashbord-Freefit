@@ -370,6 +370,28 @@
     .nav-tab { padding: 10px 14px; font-size: 12px; }
   }
 </style>
+<script>
+function checkPw() {
+  var val = document.getElementById('pwInput').value;
+  var CORRECT = 'Q1w2e3r4!';
+  if (val === CORRECT) {
+    sessionStorage.setItem('freefit_auth', btoa(CORRECT));
+    document.getElementById('lockScreen').style.display = 'none';
+    var pending = sessionStorage.getItem('pending_tab') || 'tv';
+    sessionStorage.removeItem('pending_tab');
+    if (typeof doSwitchTab === 'function') doSwitchTab(pending);
+    else setTimeout(function(){ if(typeof doSwitchTab==='function') doSwitchTab(pending); }, 500);
+  } else {
+    document.getElementById('pwError').textContent = 'סיסמה שגויה, נסה שוב';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Enter' && document.getElementById('lockScreen') &&
+      document.getElementById('lockScreen').style.display !== 'none') checkPw();
+});
+</script>
 </head>
 <body>
 
@@ -1399,6 +1421,28 @@
     .nav-tab { padding: 10px 14px; font-size: 12px; }
   }
 </style>
+<script>
+function checkPw() {
+  var val = document.getElementById('pwInput').value;
+  var CORRECT = 'Q1w2e3r4!';
+  if (val === CORRECT) {
+    sessionStorage.setItem('freefit_auth', btoa(CORRECT));
+    document.getElementById('lockScreen').style.display = 'none';
+    var pending = sessionStorage.getItem('pending_tab') || 'tv';
+    sessionStorage.removeItem('pending_tab');
+    if (typeof doSwitchTab === 'function') doSwitchTab(pending);
+    else setTimeout(function(){ if(typeof doSwitchTab==='function') doSwitchTab(pending); }, 500);
+  } else {
+    document.getElementById('pwError').textContent = 'סיסמה שגויה, נסה שוב';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Enter' && document.getElementById('lockScreen') &&
+      document.getElementById('lockScreen').style.display !== 'none') checkPw();
+});
+</script>
 </head>
 <body>
 
@@ -2068,21 +2112,7 @@
 const CORRECT_PW = 'Q1w2e3r4!';
 function isAuthed() { const s=sessionStorage.getItem('freefit_auth'); return s && atob(s)===CORRECT_PW; }
 
-function checkPw() {
-  const val = document.getElementById('pwInput').value;
-  if (val === CORRECT_PW) {
-    sessionStorage.setItem('freefit_auth', btoa(CORRECT_PW));
-    document.getElementById('lockScreen').style.display = 'none';
-    // go to the tab they tried to click, or admin by default
-    const pending = sessionStorage.getItem('pending_tab') || 'admin';
-    sessionStorage.removeItem('pending_tab');
-    doSwitchTab(pending);
-  } else {
-    document.getElementById('pwError').textContent = 'סיסמה שגויה, נסה שוב';
-    document.getElementById('pwInput').value = '';
-    document.getElementById('pwInput').focus();
-  }
-}
+/* checkPw defined early in <head> for immediate availability */
 
 function requireAuth(tab) {
   if (tab === 'tv') { doSwitchTab('tv'); return; }
