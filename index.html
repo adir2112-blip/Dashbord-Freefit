@@ -1096,10 +1096,6 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 });
 
 
-  const ct = res.headers.get('content-type')||'';
-  return ct.includes('json') ? res.json() : null;
-}
-
 /* ── SAVE TODAY ── */
 async function saveToday() {
   const btn = document.getElementById('btn_save_today');
