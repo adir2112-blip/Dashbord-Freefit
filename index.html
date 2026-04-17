@@ -407,9 +407,12 @@
     </div>
   </div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('admin')">ממשק מנהל</button>
-    <button class="nav-tab" onclick="switchTab('dashboard')">דשבורד סמנכ"ל</button>
-    <button class="nav-tab" onclick="switchTab('stats')">סטטיסטיקה נציגים</button>
+    <button class="nav-tab" onclick="requireAuth('admin')">ממשק מנהל</button>
+    <button class="nav-tab" onclick="requireAuth('dashboard')">דשבורד</button>
+    <button class="nav-tab" onclick="requireAuth('stats')">סטטיסטיקה נציגים</button>
+    <button class="nav-tab" onclick="requireAuth('weekly')">לוח שבועי</button>
+    <button class="nav-tab" onclick="requireAuth('goals')">יעדים חודשיים</button>
+    <button onclick="requireAuth('tv')" id="tv_tab" class="nav-tab active">מצב TV</button>
   </div>
   <div class="nav-right">
     <span class="live-dot"></span>
@@ -420,7 +423,7 @@
 <!-- ══════════════════════════════════════════
      ADMIN PAGE
 ══════════════════════════════════════════ -->
-<div id="page-admin" class="page active">
+<div id="page-admin" class="page">
 
   <div class="admin-header">
     <div>
@@ -555,18 +558,21 @@
         <span id="d_goal_txt">0 מתוך 0</span>
         <span class="pill pill-blue" id="d_pct">0%</span>
       </div>
+      <div id="d_total_delta" style="font-size:11px;margin-top:3px;"></div>
     </div>
     <div class="kpi">
       <div class="kpi-accent" style="background:#1D9E75"></div>
       <div class="kpi-lbl">אחוז סגירה מלידים</div>
       <div class="kpi-num" id="d_close">—</div>
       <div class="kpi-sub" id="d_close_sub">—</div>
+      <div id="d_close_delta" style="font-size:11px;margin-top:3px;"></div>
     </div>
     <div class="kpi">
       <div class="kpi-accent" style="background:#7F77DD"></div>
       <div class="kpi-lbl">שיחות יוצאות</div>
       <div class="kpi-num" id="d_calls">0</div>
       <div class="kpi-sub">ממוצע <span id="d_cph" style="font-weight:600;color:var(--text);margin:0 2px">—</span> שיחות/שעה</div>
+      <div id="d_calls_delta" style="font-size:11px;margin-top:3px;"></div>
     </div>
     <div class="kpi">
       <div class="kpi-accent" style="background:#BA7517"></div>
@@ -823,6 +829,138 @@
 </div>
 </div>
 
+
+<!-- ══════════════════════════════════════════
+     WEEKLY PAGE
+══════════════════════════════════════════ -->
+<div id="page-weekly" class="page">
+  <div class="db-header">
+    <div>
+      <div class="db-brand">פריפיט מכירות</div>
+      <div style="font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.03em;">לוח שבועי</div>
+    </div>
+    <div style="text-align:left">
+      <div class="db-date" id="weekly_date"></div>
+      <div class="db-time" id="weekly_time_badge"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:1.5rem;" id="weekly_day_cards">
+  </div>
+
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div class="card-hd">
+      <div><div class="card-title">מגמת מכירות שבועית</div><div class="card-sub">5 ימי העבודה האחרונים</div></div>
+      <div style="display:flex;gap:10px;">
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#185FA5;display:inline-block"></span>מכירות</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:24px;height:2px;background:#BA7517;display:inline-block;border-top:2px dashed #BA7517;"></span>ממוצע</span>
+      </div>
+    </div>
+    <div style="position:relative;width:100%;height:240px;"><canvas id="weekly_chart" role="img" aria-label="גרף מכירות שבועי">מגמה שבועית</canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd"><div class="card-title">טבלה שבועית מפורטת</div><div class="card-sub">פירוט לפי יום ולפי נציג</div></div>
+    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:var(--bg2);" id="weekly_tbl_head"></tr></thead>
+      <tbody id="weekly_tbl_body"></tbody>
+    </table></div>
+  </div>
+  <div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;">כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MONTHLY GOALS PAGE
+══════════════════════════════════════════ -->
+<div id="page-goals" class="page">
+  <div class="db-header">
+    <div>
+      <div class="db-brand">פריפיט מכירות</div>
+      <div style="font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.03em;">יעדים חודשיים</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="font-size:12px;color:var(--text2);background:var(--bg2);padding:5px 12px;border-radius:8px;border:1px solid var(--border);" id="goals_month_label"></div>
+    </div>
+  </div>
+
+  <div style="background:var(--blue-bg);border:1px solid rgba(24,95,165,.15);border-radius:var(--radius);padding:1rem 1.4rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <label style="font-size:13px;font-weight:600;color:var(--blue-tx);white-space:nowrap;">יעד חודשי כולל לצוות:</label>
+    <input type="number" min="0" id="monthly_goal_input" value="600"
+      style="width:90px;padding:6px 10px;font-size:15px;font-weight:700;text-align:center;border:1px solid rgba(24,95,165,.25);border-radius:8px;background:var(--bg);color:var(--blue-tx);"
+      oninput="renderGoals()" />
+    <span style="font-size:12px;color:var(--blue-tx);opacity:.75;">מכירות לחודש</span>
+    <div style="margin-right:auto;font-size:13px;color:var(--text2);">
+      ימי עבודה שעברו: <strong id="goals_work_days">0</strong> מתוך <strong id="goals_total_days">22</strong>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:1.5rem;" id="goals_kpi_row"></div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;margin-bottom:1.25rem;">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">התקדמות נציגים לעומת יעד חודשי</div><div class="card-sub">אחוז השגת היעד</div></div>
+      <div style="position:relative;width:100%;height:260px;"><canvas id="goals_bar_chart" role="img" aria-label="גרף יעדים חודשיים">יעדים</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">קצב יומי נדרש</div><div class="card-sub">כדי לעמוד ביעד</div></div>
+      <div id="goals_pace_list" style="display:flex;flex-direction:column;gap:0;"></div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;">כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TV MODE PAGE
+══════════════════════════════════════════ -->
+<div id="page-tv" class="page active" style="padding:1.5rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid var(--border);">
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:3px;">פריפיט מכירות</div>
+      <div style="font-size:32px;font-weight:800;color:var(--text);letter-spacing:-.03em;">לוח ביצועים יומי</div>
+    </div>
+    <div style="text-align:left;">
+      <div style="font-size:16px;color:var(--text2);" id="tv_date"></div>
+      <div style="font-size:13px;color:var(--text3);margin-top:3px;" id="tv_time"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:1.5rem;">
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;position:relative;overflow:hidden;box-shadow:var(--shadow-md);">
+      <div style="position:absolute;top:0;right:0;width:5px;height:100%;background:#185FA5;border-radius:0 var(--radius) var(--radius) 0;"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;">סה"כ מכירות</div>
+      <div style="font-size:52px;font-weight:800;line-height:1;color:var(--text);letter-spacing:-.03em;" id="tv_total">0</div>
+      <div style="margin-top:10px;height:6px;background:var(--bg3);border-radius:99px;overflow:hidden;"><div id="tv_bar" style="height:6px;border-radius:99px;background:#185FA5;transition:width .6s ease;width:0%"></div></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:5px;" id="tv_goal_txt">0 מתוך 0</div>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;position:relative;overflow:hidden;box-shadow:var(--shadow-md);">
+      <div style="position:absolute;top:0;right:0;width:5px;height:100%;background:#1D9E75;border-radius:0 var(--radius) var(--radius) 0;"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;">אחוז סגירה</div>
+      <div style="font-size:52px;font-weight:800;line-height:1;color:var(--text);" id="tv_close">—</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:10px;" id="tv_close_sub">—</div>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;position:relative;overflow:hidden;box-shadow:var(--shadow-md);">
+      <div style="position:absolute;top:0;right:0;width:5px;height:100%;background:#7F77DD;border-radius:0 var(--radius) var(--radius) 0;"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;">שיחות יוצאות</div>
+      <div style="font-size:52px;font-weight:800;line-height:1;color:var(--text);" id="tv_calls">0</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:10px;">ממוצע <span id="tv_cph" style="font-weight:700;color:var(--text);">—</span> שיחות/שעה</div>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;position:relative;overflow:hidden;box-shadow:var(--shadow-md);">
+      <div style="position:absolute;top:0;right:0;width:5px;height:100%;background:#BA7517;border-radius:0 var(--radius) var(--radius) 0;"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;">נציג מוביל</div>
+      <div style="font-size:28px;font-weight:800;line-height:1.1;color:var(--text);margin-bottom:4px;" id="tv_top_name">—</div>
+      <div style="font-size:14px;color:var(--amber-tx);font-weight:700;" id="tv_top_val">—</div>
+    </div>
+  </div>
+
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;box-shadow:var(--shadow-md);">
+    <div style="font-size:13px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1rem;">דירוג נציגים</div>
+    <div id="tv_agents" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;"></div>
+  </div>
+
+  <div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;">כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026</div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal-box">
@@ -839,28 +977,53 @@
 <script>
 /* ── PASSWORD ── */
 const CORRECT_PW = 'Q1w2e3r4!';
+function isAuthed() { const s=sessionStorage.getItem('freefit_auth'); return s && atob(s)===CORRECT_PW; }
+
 function checkPw() {
   const val = document.getElementById('pwInput').value;
   if (val === CORRECT_PW) {
-    document.getElementById('lockScreen').style.display = 'none';
     sessionStorage.setItem('freefit_auth', btoa(CORRECT_PW));
+    document.getElementById('lockScreen').style.display = 'none';
+    // go to the tab they tried to click, or admin by default
+    const pending = sessionStorage.getItem('pending_tab') || 'admin';
+    sessionStorage.removeItem('pending_tab');
+    doSwitchTab(pending);
   } else {
     document.getElementById('pwError').textContent = 'סיסמה שגויה, נסה שוב';
     document.getElementById('pwInput').value = '';
     document.getElementById('pwInput').focus();
   }
 }
+
+function requireAuth(tab) {
+  if (tab === 'tv') { doSwitchTab('tv'); return; }
+  if (isAuthed()) { doSwitchTab(tab); return; }
+  sessionStorage.setItem('pending_tab', tab);
+  document.getElementById('lockScreen').style.display = 'flex';
+  setTimeout(() => { const pi=document.getElementById('pwInput'); if(pi){pi.value='';pi.focus();} }, 80);
+  document.getElementById('pwError').textContent = '';
+}
+
+function doSwitchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const page = document.getElementById('page-'+tab);
+  if (page) page.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.getAttribute('onclick') && t.getAttribute('onclick').includes("'"+tab+"'")) t.classList.add('active');
+  });
+  if (tab === 'dashboard') updateDashboard();
+  if (tab === 'stats') { refreshAgentSelect(); loadStats(); }
+  if (tab === 'weekly') loadWeekly();
+  if (tab === 'goals') renderGoals();
+  if (tab === 'tv') { updateTV(); setInterval(()=>{if(document.getElementById('page-tv').classList.contains('active'))updateTV();},30000); }
+}
+
+// On load: start on TV (no auth needed)
 (function() {
-  const saved = sessionStorage.getItem('freefit_auth');
-  if (saved && atob(saved) === CORRECT_PW) {
-    const ls = document.getElementById('lockScreen');
-    if (ls) ls.style.display = 'none';
-  } else {
-    // force show lock screen
-    const ls = document.getElementById('lockScreen');
-    if (ls) ls.style.display = 'flex';
-    setTimeout(() => { const pi = document.getElementById('pwInput'); if(pi) pi.focus(); }, 100);
-  }
+  // hide lock screen initially — TV is free
+  const ls = document.getElementById('lockScreen');
+  if (ls) ls.style.display = 'none';
 })();
 
 /* ── SUPABASE CONFIG ── */
@@ -894,14 +1057,7 @@ const AVATARBG = ['#E6F1FB','#E1F5EE','#EEEDFE','#FAEEDA','#FAECE7','#EAF3DE','#
 const AVATARTX = ['#0C447C','#085041','#3C3489','#633806','#712B13','#27500A','#72243E'];
 
 /* ── TABS ── */
-function switchTab(tab) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('page-' + tab).classList.add('active');
-  event.target.classList.add('active');
-  if (tab === 'dashboard') updateDashboard();
-  if (tab === 'stats') { refreshAgentSelect(); loadStats(); }
-}
+function switchTab(tab) { requireAuth(tab); }
 
 /* ── TIME ── */
 function tick() {
@@ -1032,6 +1188,23 @@ function updateDashboard() {
   if (gtEl) gtEl.textContent = sTotal;
 
   updateCharts(sorted, sLeads, sRenew, sHmo, sTotal);
+
+  // delta display
+  if(window._ydSales!==undefined){
+    const dEl=document.getElementById('d_total_delta');
+    if(dEl)dEl.innerHTML=deltaHtml(sTotal,window._ydSales,false);
+  }
+  if(window._ydCalls!==undefined){
+    const dEl=document.getElementById('d_calls_delta');
+    if(dEl)dEl.innerHTML=deltaHtml(sCalls,window._ydCalls,false);
+  }
+  if(window._ydClose!==undefined&&closeRate!=='—'){
+    const dEl=document.getElementById('d_close_delta');
+    const curPct=parseFloat(closeRate);
+    const prevPct=parseFloat(window._ydClose);
+    if(dEl&&!isNaN(curPct)&&!isNaN(prevPct))dEl.innerHTML=deltaHtml(curPct,prevPct,true);
+  }
+  if(document.getElementById('page-tv')&&document.getElementById('page-tv').classList.contains('active'))updateTV();
 }
 
 /* ── CHARTS ── */
@@ -1460,6 +1633,315 @@ async function loadStats() {
   }
 }
 
+
+/* ── YESTERDAY DELTA ── */
+async function loadYesterdayDelta() {
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate()-1);
+    const yDate = yesterday.toISOString().slice(0,10);
+    const rows = await supaFetch('daily_stats?date=eq.'+yDate, {headers:{'Prefer':'return=representation'}});
+    if (!rows || rows.length===0) return;
+    const ySales = rows.reduce((s,r)=>s+r.total_sales,0);
+    const yCalls = rows.reduce((s,r)=>s+r.calls,0);
+    const yLeads = rows.reduce((s,r)=>s+r.leads,0);
+    const yDailyLeads = rows.reduce((s,r)=>s+r.daily_leads,0);
+    const yClose = yDailyLeads>0 ? (yLeads/yDailyLeads*100).toFixed(1) : null;
+    window._ydSales = ySales;
+    window._ydCalls = yCalls;
+    window._ydClose = yClose;
+  } catch(e) {}
+}
+
+function deltaHtml(curr, prev, isPercent) {
+  if (!prev && prev!==0) return '';
+  const diff = curr - prev;
+  if (diff===0) return '<span style="color:var(--text3);">= אתמול</span>';
+  const sign = diff>0 ? '+' : '';
+  const col = diff>0 ? 'var(--green-tx)' : 'var(--red-tx)';
+  const arrow = diff>0 ? '▲' : '▼';
+  const val = isPercent ? sign+diff.toFixed(1)+'%' : sign+diff;
+  return `<span style="color:${col};font-weight:600;">${arrow} ${val} vs אתמול</span>`;
+}
+
+/* ── WEEKLY PAGE ── */
+let weeklyChartInst = null;
+async function loadWeekly() {
+  const now = new Date();
+  document.getElementById('weekly_date').textContent = now.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('weekly_time_badge').textContent = 'עודכן: '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+
+  const days = [];
+  for (let i=4; i>=0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate()-i);
+    const dow = d.getDay();
+    if (dow===5||dow===6) continue;
+    days.push(d.toISOString().slice(0,10));
+  }
+  if (days.length<5) {
+    for (let i=days.length; days.length<5;) {
+      const d = new Date(now);
+      d.setDate(d.getDate()-(++i+4));
+      const dow = d.getDay();
+      if (dow!==5&&dow!==6) days.unshift(d.toISOString().slice(0,10));
+    }
+  }
+
+  let allRows = [];
+  try {
+    allRows = await supaFetch('daily_stats?date=gte.'+days[0]+'&date=lte.'+days[days.length-1]+'&order=date.asc', {headers:{'Prefer':'return=representation'}}) || [];
+  } catch(e) {}
+
+  const byDay = {};
+  days.forEach(d=>{ byDay[d]={total:0,calls:0,hours:0,leads:0,renew:0,hmo:0,dailyLeads:0}; });
+  allRows.forEach(r=>{
+    if(byDay[r.date]){
+      byDay[r.date].total+=r.total_sales;
+      byDay[r.date].calls+=r.calls;
+      byDay[r.date].hours+=r.hours;
+      byDay[r.date].leads+=r.leads;
+      byDay[r.date].renew+=r.renewals;
+      byDay[r.date].hmo+=r.hmo;
+      byDay[r.date].dailyLeads+=r.daily_leads;
+    }
+  });
+
+  const heDays = ['ראשון','שני','שלישי','רביעי','חמישי'];
+  const dayNames = days.map(d=>{
+    const dt = new Date(d);
+    const dayIdx = dt.getDay();
+    const map = {0:'ראשון',1:'שני',2:'שלישי',3:'רביעי',4:'חמישי'};
+    return (map[dayIdx]||'') + ' ' + d.slice(5).replace('-','/');
+  });
+  const totals = days.map(d=>byDay[d].total);
+  const avg = totals.reduce((s,v)=>s+v,0)/totals.length;
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  const container = document.getElementById('weekly_day_cards');
+  container.innerHTML = '';
+  days.forEach((d,i)=>{
+    const dta = byDay[d];
+    const isToday = d===todayStr;
+    const cr = dta.dailyLeads>0 ? (dta.leads/dta.dailyLeads*100).toFixed(0)+'%' : '—';
+    container.innerHTML += `
+      <div style="background:var(--bg);border:${isToday?'2px solid var(--blue)':'1px solid var(--border)'};border-radius:var(--radius);padding:1rem 1.1rem;box-shadow:var(--shadow-sm);">
+        <div style="font-size:10px;font-weight:700;color:${isToday?'var(--blue)':'var(--text3)'};letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px;">${dayNames[i]}${isToday?' · היום':''}</div>
+        <div style="font-size:30px;font-weight:800;color:var(--text);letter-spacing:-.03em;line-height:1;">${dta.total}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">מכירות</div>
+        <div style="height:3px;background:var(--bg3);border-radius:99px;margin-top:8px;overflow:hidden;"><div style="height:3px;background:${isToday?'#185FA5':'#1D9E75'};border-radius:99px;width:${Math.round(dta.total/Math.max(...totals,1)*100)}%;"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--text3);">
+          <span>${dta.calls} שיחות</span><span>${cr} סגירה</span>
+        </div>
+      </div>`;
+  });
+
+  const isDk = matchMedia('(prefers-color-scheme:dark)').matches;
+  const gc = isDk?'rgba(255,255,255,.07)':'rgba(0,0,0,.06)';
+  const tc = isDk?'#888780':'#73726c';
+  if(weeklyChartInst){weeklyChartInst.destroy();weeklyChartInst=null;}
+  weeklyChartInst = new Chart(document.getElementById('weekly_chart'),{
+    type:'bar',
+    data:{labels:dayNames,datasets:[
+      {label:'מכירות',data:totals,backgroundColor:days.map(d=>d===todayStr?'#185FA5':'rgba(24,95,165,.35)'),borderRadius:6,borderSkipped:false},
+      {type:'line',label:'ממוצע',data:days.map(()=>parseFloat(avg.toFixed(1))),borderColor:'#BA7517',borderDash:[5,4],borderWidth:2,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{rtl:true}},
+      scales:{x:{ticks:{color:tc,font:{size:11}},grid:{display:false}},y:{ticks:{color:tc,font:{size:11},stepSize:1,callback:v=>Number.isInteger(v)?v:''},grid:{color:gc},min:0}}}
+  });
+
+  const head = document.getElementById('weekly_tbl_head');
+  head.innerHTML = '<th style="padding:9px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);letter-spacing:.06em;">נציג</th>' +
+    dayNames.map((n,i)=>`<th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:700;color:${days[i]===todayStr?'var(--blue)':'var(--text3)'};border-bottom:1px solid var(--border);white-space:nowrap;">${n}</th>`).join('') +
+    '<th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:700;color:var(--blue);border-bottom:1px solid var(--border);">סה"כ שבוע</th>';
+
+  const body = document.getElementById('weekly_tbl_body');
+  body.innerHTML = '';
+  agents.forEach((a,ai)=>{
+    const rowTotals = days.map(d=>{ const r=allRows.find(r=>r.date===d&&r.agent_name===a.name); return r?r.total_sales:0; });
+    const weekTotal = rowTotals.reduce((s,v)=>s+v,0);
+    body.innerHTML += `<tr style="${ai%2===1?'background:var(--bg2);':''}border-bottom:1px solid var(--border);">
+      <td style="padding:9px 14px;font-weight:600;font-size:13px;color:var(--text);">${a.name}</td>
+      ${rowTotals.map((v,i)=>`<td style="padding:9px 10px;text-align:center;font-size:13px;${days[i]===todayStr?'font-weight:700;color:var(--blue);':''}">${v||'—'}</td>`).join('')}
+      <td style="padding:9px 14px;text-align:center;font-size:14px;font-weight:800;color:var(--blue);">${weekTotal}</td>
+    </tr>`;
+  });
+  const sumRow = days.map(d=>byDay[d].total);
+  body.innerHTML += `<tr style="background:var(--bg2);border-top:2px solid var(--border2);">
+    <td style="padding:9px 14px;font-weight:700;font-size:12px;color:var(--text3);">סה"כ יום</td>
+    ${sumRow.map((v,i)=>`<td style="padding:9px 10px;text-align:center;font-size:13px;font-weight:700;color:var(--blue);">${v}</td>`).join('')}
+    <td style="padding:9px 14px;text-align:center;font-size:15px;font-weight:800;color:var(--blue);">${sumRow.reduce((s,v)=>s+v,0)}</td>
+  </tr>`;
+}
+
+/* ── MONTHLY GOALS PAGE ── */
+let goalsBarInst = null;
+async function renderGoals() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const monthStr = now.toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+  document.getElementById('goals_month_label').textContent = monthStr;
+
+  let workDays=0, totalWorkDays=0;
+  for(let d=new Date(monthStart);d<=monthEnd;d.setDate(d.getDate()+1)){
+    const dow=d.getDay(); if(dow===5||dow===6) continue;
+    totalWorkDays++;
+    if(d<=now) workDays++;
+  }
+  document.getElementById('goals_work_days').textContent = workDays;
+  document.getElementById('goals_total_days').textContent = totalWorkDays;
+
+  let rows=[];
+  try {
+    rows = await supaFetch('daily_stats?date=gte.'+monthStart.toISOString().slice(0,10)+'&date=lte.'+monthEnd.toISOString().slice(0,10), {headers:{'Prefer':'return=representation'}}) || [];
+  } catch(e){}
+
+  const monthlyGoal = parseInt(document.getElementById('monthly_goal_input').value)||600;
+  const totalSales  = rows.reduce((s,r)=>s+r.total_sales,0);
+  const pct = monthlyGoal>0 ? Math.min(Math.round(totalSales/monthlyGoal*100),100) : 0;
+  const remaining   = Math.max(monthlyGoal-totalSales,0);
+  const daysLeft    = Math.max(totalWorkDays-workDays,1);
+  const dailyNeed   = Math.ceil(remaining/daysLeft);
+  const avgDaily    = workDays>0 ? (totalSales/workDays).toFixed(1) : 0;
+  const barColor    = pct>=100?'#3B6D11':pct>=70?'#185FA5':'#BA7517';
+  const pillCls     = pct>=100?'pill-green':pct>=70?'pill-blue':'pill-amber';
+
+  document.getElementById('goals_kpi_row').innerHTML = `
+    <div class="kpi"><div class="kpi-accent" style="background:#185FA5"></div>
+      <div class="kpi-lbl">מכירות החודש</div>
+      <div class="kpi-num">${totalSales}</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <div class="kpi-sub" style="margin-top:5px;">${totalSales} מתוך ${monthlyGoal} <span class="pill ${pillCls}">${pct}%</span></div>
+    </div>
+    <div class="kpi"><div class="kpi-accent" style="background:#1D9E75"></div>
+      <div class="kpi-lbl">ממוצע יומי</div>
+      <div class="kpi-num">${avgDaily}</div>
+      <div class="kpi-sub">מכירות ליום עבודה</div>
+    </div>
+    <div class="kpi"><div class="kpi-accent" style="background:#BA7517"></div>
+      <div class="kpi-lbl">קצב נדרש</div>
+      <div class="kpi-num">${dailyNeed}</div>
+      <div class="kpi-sub">מכירות/יום לסגירת יעד</div>
+    </div>
+    <div class="kpi"><div class="kpi-accent" style="background:#7F77DD"></div>
+      <div class="kpi-lbl">ימים שנותרו</div>
+      <div class="kpi-num">${daysLeft}</div>
+      <div class="kpi-sub">ימי עבודה עד סוף חודש</div>
+    </div>`;
+
+  const agentTotals = agents.map(a=>({
+    name:a.name,
+    total:rows.filter(r=>r.agent_name===a.name).reduce((s,r)=>s+r.total_sales,0),
+    personalGoal: Math.round(monthlyGoal/agents.length)
+  })).sort((a,b)=>b.total-a.total);
+
+  const isDk = matchMedia('(prefers-color-scheme:dark)').matches;
+  const gc = isDk?'rgba(255,255,255,.07)':'rgba(0,0,0,.06)';
+  const tc = isDk?'#888780':'#73726c';
+  if(goalsBarInst){goalsBarInst.destroy();goalsBarInst=null;}
+  goalsBarInst = new Chart(document.getElementById('goals_bar_chart'),{
+    type:'bar',
+    data:{
+      labels:agentTotals.map(a=>a.name.split(' ')[0]),
+      datasets:[
+        {label:'הושג',data:agentTotals.map(a=>a.total),backgroundColor:'#185FA5',borderRadius:4,barPercentage:.6},
+        {label:'יעד',data:agentTotals.map(a=>a.personalGoal),backgroundColor:isDk?'rgba(255,255,255,.1)':'rgba(0,0,0,.07)',borderRadius:4,barPercentage:.6}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{rtl:true}},
+      scales:{x:{ticks:{color:tc,font:{size:12}},grid:{display:false}},y:{ticks:{color:tc,font:{size:11},stepSize:1,callback:v=>Number.isInteger(v)?v:''},grid:{color:gc},min:0}}}
+  });
+
+  const paceList = document.getElementById('goals_pace_list');
+  paceList.innerHTML = '';
+  agentTotals.forEach((a,i)=>{
+    const agPct = a.personalGoal>0?Math.min(Math.round(a.total/a.personalGoal*100),100):0;
+    const agRemain = Math.max(a.personalGoal-a.total,0);
+    const agNeed = Math.ceil(agRemain/daysLeft);
+    const col = agPct>=100?'#3B6D11':agPct>=70?'#185FA5':'#BA7517';
+    const avBg = ['#E6F1FB','#E1F5EE','#EEEDFE','#FAEEDA','#FAECE7'][i%5];
+    const avTx = ['#0C447C','#085041','#3C3489','#633806','#712B13'][i%5];
+    paceList.innerHTML += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;border-radius:50%;background:${avBg};color:${avTx};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${a.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;">${a.name}</div>
+        <div style="height:4px;background:var(--bg3);border-radius:99px;overflow:hidden;"><div style="height:4px;width:${agPct}%;background:${col};border-radius:99px;"></div></div>
+      </div>
+      <div style="text-align:left;flex-shrink:0;">
+        <div style="font-size:13px;font-weight:700;color:${col};">${agPct}%</div>
+        <div style="font-size:10px;color:var(--text3);">${agNeed}/יום</div>
+      </div>
+    </div>`;
+  });
+}
+
+/* ── TV MODE ── */
+function updateTV() {
+  let sCalls=0,sHours=0,sLeads=0,sRenew=0,sHmo=0,cphSum=0,cphCnt=0;
+  agents.forEach(a=>{
+    const calls=gv(a.id,'calls'),hours=gv(a.id,'hours'),leads=gv(a.id,'leads'),renew=gv(a.id,'renew'),hmo=gv(a.id,'hmo');
+    sCalls+=calls;sHours+=hours;sLeads+=leads;sRenew+=renew;sHmo+=hmo;
+    if(hours>0){cphSum+=calls/hours;cphCnt++;}
+  });
+  const sTotal=sLeads+sRenew+sHmo;
+  const goal=parseInt(document.getElementById('goalInput').value)||30;
+  const pct=goal>0?Math.min(Math.round(sTotal/goal*100),100):0;
+  const barColor=pct>=100?'#3B6D11':pct>=70?'#185FA5':'#BA7517';
+  const avgCph=cphCnt>0?(cphSum/cphCnt).toFixed(1):'—';
+  const dailyLeads=parseFloat(document.getElementById('dailyLeads').value)||0;
+  const closeRate=dailyLeads>0?((sLeads/dailyLeads)*100).toFixed(1)+'%':'—';
+  const now=new Date();
+  const tvDate=document.getElementById('tv_date');
+  const tvTime=document.getElementById('tv_time');
+  if(tvDate) tvDate.textContent=now.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  if(tvTime) tvTime.textContent='עודכן: '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  setEl('tv_total',sTotal); setEl('tv_close',closeRate);
+  setEl('tv_close_sub',dailyLeads>0?sLeads+' נסגרו מתוך '+dailyLeads+' לידים':'הזן לידים יומיים');
+  setEl('tv_calls',sCalls); setEl('tv_cph',avgCph);
+  setEl('tv_goal_txt',sTotal+' מתוך '+goal);
+  const bar=document.getElementById('tv_bar');
+  if(bar){bar.style.width=pct+'%';bar.style.background=barColor;}
+  const sorted=[...agents].map(a=>({...a,total:gv(a.id,'leads')+gv(a.id,'renew')+gv(a.id,'hmo')})).sort((a,b)=>b.total-a.total);
+  const top=sorted[0];
+  setEl('tv_top_name',top&&top.total>0?top.name.split(' ')[0]:'—');
+  setEl('tv_top_val',top&&top.total>0?top.total+' מכירות היום':'—');
+  const tvAgents=document.getElementById('tv_agents');
+  if(!tvAgents)return;
+  tvAgents.innerHTML='';
+  const maxT=Math.max(...sorted.map(a=>a.total),1);
+  const AVBG=['#E6F1FB','#E1F5EE','#EEEDFE','#FAEEDA','#FAECE7'];
+  const AVTX=['#0C447C','#085041','#3C3489','#633806','#712B13'];
+  sorted.forEach((a,i)=>{
+    const pBar=Math.round(a.total/maxT*100);
+    const avBg=AVBG[i%AVBG.length], avTx=AVTX[i%AVTX.length];
+    const isTop=i===0&&a.total>0;
+    const personalGoal=gv(a.id,'goal');
+    const goalPct=personalGoal>0?Math.min(Math.round(a.total/personalGoal*100),100):null;
+    const goalColor=goalPct===null?avTx:goalPct>=100?'#3B6D11':goalPct>=70?'#185FA5':'#BA7517';
+    const goalSection=personalGoal>0
+      ?`<div style="display:flex;align-items:center;justify-content:space-between;margin-top:7px;margin-bottom:3px;">
+          <div style="font-size:11px;color:var(--text3);">יעד יומי: <strong style="color:var(--text);">${personalGoal}</strong></div>
+          <div style="font-size:12px;font-weight:700;color:${goalColor};">${goalPct}%</div>
+        </div>
+        <div style="height:5px;background:var(--bg3);border-radius:99px;overflow:hidden;">
+          <div style="height:5px;width:${goalPct}%;background:${goalColor};border-radius:99px;transition:width .5s ease;"></div>
+        </div>`
+      :`<div style="height:5px;background:var(--bg3);border-radius:99px;margin-top:10px;overflow:hidden;">
+          <div style="height:5px;width:${pBar}%;background:${avTx};border-radius:99px;"></div>
+        </div>`;
+    tvAgents.innerHTML+=`<div style="background:var(--bg2);border:1px solid ${isTop?'var(--amber)':'var(--border)'};border-radius:var(--radius);padding:1rem;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <div style="width:38px;height:38px;border-radius:50%;background:${avBg};color:${avTx};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">${a.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+        <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${isTop?'🥇 ':''}${a.name.split(' ')[0]}</div></div>
+        <div style="font-size:28px;font-weight:800;color:${isTop?'var(--amber-tx)':'var(--blue)'};">${a.total}</div>
+      </div>
+      ${goalSection}
+    </div>`;
+  });
+}
+
 /* ── AGENTS FROM SUPABASE ── */
 async function loadAgents() {
   try {
@@ -1573,6 +2055,8 @@ document.addEventListener('input', () => saveTodayInputs());
 
 /* ── INIT ── */
 loadAgents();
+loadYesterdayDelta();
+setTimeout(()=>doSwitchTab('tv'),100);
 </script>
 </body>
 </html>
