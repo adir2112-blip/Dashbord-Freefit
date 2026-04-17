@@ -1530,19 +1530,24 @@ function refreshAgentSelect() {
 }
 
 /* ── DELETE AGENT DATA ── */
+let _pauseAutosave = false;
+
 async function deleteAgentData() {
   const agentName = document.getElementById('delete_agent_sel').value;
   const range     = document.getElementById('delete_range_sel').value;
   const statusEl  = document.getElementById('delete_status');
   if (!agentName) { statusEl.textContent = 'בחר נציג תחילה'; return; }
 
-  const confirmMsg = range === 'all'
-    ? `למחוק את כל הנתונים של ${agentName}?`
-    : `למחוק נתוני ${range === 'today' ? 'היום' : range === 'week' ? 'שבוע אחרון' : 'חודש אחרון'} של ${agentName}?`;
+  const rangeLabel = range==='today'?'היום':range==='week'?'שבוע אחרון':range==='month'?'חודש אחרון':'כל הנתונים';
+  if (!confirm(`למחוק ${rangeLabel} של ${agentName}?
+הנתונים יימחקו לצמיתות.`)) return;
 
-  if (!confirm(confirmMsg)) return;
-
+  // ── pause autosave so it doesn't re-write immediately ──
+  _pauseAutosave = true;
+  clearTimeout(_supaDebounce);
   statusEl.textContent = 'מוחק...';
+  statusEl.style.color = 'var(--red-tx)';
+
   try {
     const today = new Date();
     let fromDate = '';
@@ -1558,17 +1563,41 @@ async function deleteAgentData() {
 
     let path = 'daily_stats?agent_name=eq.'+encodeURIComponent(agentName);
     if (fromDate) path += '&date=gte.'+fromDate;
-
     await supaFetch(path, {method:'DELETE'});
+
+    // If today's data was deleted — also clear localStorage and reset inputs for that agent
+    const todayStr = today.toISOString().slice(0,10);
+    const isToday = !fromDate || fromDate <= todayStr;
+    if (isToday) {
+      const a = agents.find(x=>x.name===agentName);
+      if (a) {
+        ['calls','hours','leads','renew','hmo'].forEach(f=>{
+          const el = document.getElementById(f+'_'+a.id);
+          if(el) el.value='0';
+        });
+        calcAll();
+      }
+      // Clear localStorage for today
+      const key = 'freefit_today_'+todayStr;
+      localStorage.removeItem(key);
+    }
+
     statusEl.textContent = '✓ נמחק בהצלחה';
     statusEl.style.color = 'var(--green-tx)';
-    setTimeout(() => { statusEl.textContent = ''; statusEl.style.color = 'var(--red-tx)'; }, 3000);
 
-    // Reload stats if same agent is shown
+    // Reload stats if same agent shown
     const statsSel = document.getElementById('stats_agent');
     if (statsSel && statsSel.value === agentName) loadStats();
+
+    setTimeout(() => {
+      statusEl.textContent = '';
+      statusEl.style.color = 'var(--red-tx)';
+      _pauseAutosave = false; // re-enable autosave after 5s
+    }, 5000);
+
   } catch(e) {
     statusEl.textContent = 'שגיאה: ' + e.message.slice(0,40);
+    _pauseAutosave = false;
   }
 }
 
@@ -2088,6 +2117,7 @@ let _supaDebounce = null;
 function debouncedSupaSave() {
   clearTimeout(_supaDebounce);
   _supaDebounce = setTimeout(async () => {
+    if (_pauseAutosave) return;
     try {
       const today = new Date().toISOString().slice(0,10);
       const dailyLeads = parseInt(document.getElementById('dailyLeads').value)||0;
