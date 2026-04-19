@@ -3088,9 +3088,12 @@ async function syncFromSupabase() {
     const rows = await supaFetch('daily_stats?date=eq.'+today, {headers:{'Prefer':'return=representation'}});
     if (!rows || rows.length === 0) return;
 
-    const dailyLeadsTotal = rows.reduce((s,r) => s + r.daily_leads, 0);
+    // dailyLeads is entered manually — only restore if field is empty
     const dlEl = document.getElementById('dailyLeads');
-    if (dlEl) dlEl.value = dailyLeadsTotal || '';
+    if (dlEl && (!dlEl.value || dlEl.value === '0' || dlEl.value === '')) {
+      const dailyLeadsTotal = rows.reduce((s,r) => s + r.daily_leads, 0);
+      if (dailyLeadsTotal > 0) dlEl.value = dailyLeadsTotal;
+    }
 
     agents.forEach(a => {
       const r = rows.find(x => x.agent_name === a.name);
