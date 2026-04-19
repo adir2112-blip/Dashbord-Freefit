@@ -1734,6 +1734,8 @@ function doSwitchTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t => {
     if (t.getAttribute('onclick') && t.getAttribute('onclick').includes("'"+tab+"'")) t.classList.add('active');
   });
+  // Sync fresh data on every tab switch
+  if (tab !== 'tv') syncFromSupabase();
   if (tab === 'dashboard') updateDashboard();
   if (tab === 'stats') { refreshAgentSelect(); loadStats(); }
   if (tab === 'weekly') loadWeekly();
@@ -1743,7 +1745,7 @@ function doSwitchTab(tab) {
     if(!window._tvPollInterval) {
       window._tvPollInterval = setInterval(()=>{
         if(document.getElementById('page-tv').classList.contains('active')) updateTVFromSupabase();
-      }, 300000);
+      }, 120000);
     }
   }
 }
@@ -3076,10 +3078,59 @@ function restoreTodayInputs() {
 }
 document.addEventListener('input', () => saveTodayInputs());
 
+
+/* ── REAL-TIME SYNC — every 2 minutes ── */
+async function syncFromSupabase() {
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const rows = await supaFetch('daily_stats?date=eq.'+today, {headers:{'Prefer':'return=representation'}});
+    if (!rows || rows.length === 0) return;
+
+    const dailyLeadsTotal = rows.reduce((s,r) => s + r.daily_leads, 0);
+    const dlEl = document.getElementById('dailyLeads');
+    if (dlEl) dlEl.value = dailyLeadsTotal || '';
+
+    agents.forEach(a => {
+      const r = rows.find(x => x.agent_name === a.name);
+      if (!r) return;
+      const fields = {calls:'calls', hours:'hours', leads:'leads', renew:'renewals', hmo:'hmo'};
+      Object.entries(fields).forEach(([field, col]) => {
+        const el = document.getElementById(field+'_'+a.id);
+        if (el) el.value = r[col] || '';
+      });
+    });
+
+    calcAll();
+
+    // Update active page specifically
+    const activePage = document.querySelector('.page.active');
+    if (activePage) {
+      const id = activePage.id;
+      if (id === 'page-dashboard') updateDashboard();
+      if (id === 'page-tv') updateTV();
+      if (id === 'page-weekly') loadWeekly();
+      if (id === 'page-goals') renderGoals();
+    }
+
+    // Show sync indicator
+    const timeStr = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    const ind = document.getElementById('autosave_indicator');
+    if (ind) { ind.textContent = '⟳ סונכרן ' + timeStr; ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0', 3000); }
+
+  } catch(e) { console.warn('syncFromSupabase error:', e.message); }
+}
+
+// Start polling every 2 minutes
+setInterval(syncFromSupabase, 120000);
+
+// Also sync immediately when switching tabs
+const _origDoSwitchTab = doSwitchTab;
 /* ── INIT ── */
 loadAgents();
 loadYesterdayDelta();
 setTimeout(()=>doSwitchTab('tv'),100);
+// Real-time sync starts via setInterval in syncFromSupabase block above
+setTimeout(syncFromSupabase, 3000);
 </script>
 </body>
 </html>
