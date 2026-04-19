@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>פריפיט מכירות — דשבורד יומי</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23185FA5'/%3E%3Crect x='3' y='17' width='6' height='11' rx='2' fill='white' opacity='.9'/%3E%3Crect x='13' y='11' width='6' height='17' rx='2' fill='white'/%3E%3Crect x='23' y='4' width='6' height='24' rx='2' fill='white' opacity='.8'/%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2037,7 +2038,8 @@ function updateCharts(sorted, sLeads, sRenew, sHmo, sTotal) {
     const goalPct = personalGoal > 0 ? Math.min(Math.round(a.total/personalGoal*100),100) : null;
     const goalColor = goalPct===null?'var(--text3)':goalPct>=100?'#3B6D11':goalPct>=70?'#185FA5':'#BA7517';
     const goalCell = personalGoal > 0
-      ? `<div style="font-size:12px;font-weight:700;color:${goalColor};">${goalPct}%</div>
+      ? `<div style="font-size:10px;color:var(--text3);margin-bottom:2px;">יעד: <strong style="color:var(--text);">${personalGoal}</strong></div>
+         <div style="font-size:12px;font-weight:700;color:${goalColor};">${goalPct}%</div>
          <div style="height:3px;background:var(--bg3);border-radius:99px;margin-top:3px;width:48px;overflow:hidden;">
            <div style="height:3px;width:${goalPct}%;background:${goalColor};border-radius:99px;"></div>
          </div>`
