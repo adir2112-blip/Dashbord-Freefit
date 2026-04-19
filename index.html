@@ -414,6 +414,7 @@
     <button class="nav-tab" onclick="requireAuth('weekly')">לוח שבועי</button>
     <button class="nav-tab" onclick="requireAuth('goals')">יעדים חודשיים</button>
     <button onclick="requireAuth('tv')" id="tv_tab" class="nav-tab active">מצב TV</button>
+    <button class="nav-tab" onclick="requireAuth('contest')" style="color:var(--amber-tx);font-weight:600;">🏆 תחרויות</button>
   </div>
   <div class="nav-right">
     <span class="live-dot"></span>
@@ -986,6 +987,145 @@
   <div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;">כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026</div>
 </div>
 
+
+
+<!-- ══════════════════════════════════════════
+     CONTEST PAGE
+══════════════════════════════════════════ -->
+<div id="page-contest" class="page">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:var(--radius-lg);padding:2rem 2.5rem;margin-bottom:1.75rem;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-20px;right:-20px;font-size:120px;opacity:.06;pointer-events:none;">🏆</div>
+    <div style="position:absolute;bottom:-30px;left:10px;font-size:80px;opacity:.05;pointer-events:none;">⭐</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:6px;">פריפיט מכירות</div>
+        <div style="font-size:30px;font-weight:800;color:#fff;letter-spacing:-.02em;display:flex;align-items:center;gap:12px;">
+          🏆 לוח תחרויות
+        </div>
+        <div style="font-size:13px;color:rgba(255,255,255,.55);margin-top:6px;" id="contest_subtitle">הגדר יעד וצפה במירוץ בין הנציגים</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button onclick="resetContest()" style="padding:7px 14px;font-size:12px;font-weight:600;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:var(--radius-sm);cursor:pointer;">🔄 איפוס</button>
+        <button onclick="saveContest()" style="padding:7px 16px;font-size:13px;font-weight:700;background:#BA7517;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;box-shadow:0 2px 8px rgba(186,117,23,.4);">💾 שמור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings strip -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:20px;flex-wrap:wrap;box-shadow:var(--shadow-sm);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">🎯</span>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px;">יעד תחרות</div>
+        <input type="number" min="0" id="contest_goal" value="100"
+          style="width:80px;padding:5px 8px;font-size:16px;font-weight:800;text-align:center;border:2px solid var(--amber);border-radius:var(--radius-sm);background:var(--bg);color:var(--amber-tx);"
+          oninput="calcContest()" />
+      </div>
+    </div>
+    <div style="width:1px;height:40px;background:var(--border);"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">📅</span>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px;">ימי עבודה בתחרות</div>
+        <input type="number" min="1" id="contest_days" value="5"
+          style="width:70px;padding:5px 8px;font-size:16px;font-weight:800;text-align:center;border:2px solid var(--blue);border-radius:var(--radius-sm);background:var(--bg);color:var(--blue-tx);"
+          oninput="calcContest()" />
+      </div>
+    </div>
+    <div style="width:1px;height:40px;background:var(--border);"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">📊</span>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px;">יעד יומי</div>
+        <div style="font-size:20px;font-weight:800;color:var(--text);" id="contest_total_goal_display">30</div>
+      </div>
+    </div>
+    <div style="width:1px;height:40px;background:var(--border);"></div>
+    <div style="margin-right:auto;display:flex;gap:8px;align-items:center;">
+      <button onclick="addContestAgent()" style="padding:7px 14px;font-size:12px;font-weight:600;background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;">+ הוסף נציג</button>
+      <span id="contest_save_status" style="font-size:11px;color:var(--green-tx);"></span>
+    </div>
+  </div>
+
+  <!-- Leaderboard cards -->
+  <div id="contest_leaderboard" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:1.5rem;"></div>
+
+  <!-- Table -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);">
+    <div style="padding:1rem 1.4rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">📋</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">טבלת תחרות מפורטת</div>
+        <div style="font-size:11px;color:var(--text3);">מכירות, יעדים ואחוזי עמידה</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:linear-gradient(90deg,#1a1a2e,#0f3460);">
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">#</th>
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">שם נציג</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">מכירות יומי</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">מכירות מצטבר</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">יעד יומי</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">יעד מצטבר</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:#f0c040;letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">% יומי</th>
+            <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#f0c040;letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">% מצטבר</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">פעולות</th>
+          </tr>
+        </thead>
+        <tbody id="contest_tbody"></tbody>
+        <tfoot id="contest_tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- Calc Goals Table -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);margin-top:1.5rem;">
+    <div style="padding:1rem 1.4rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,rgba(24,95,165,.07),transparent);">
+      <span style="font-size:18px;">🎯</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">חישוב יעדי תחרות</div>
+        <div style="font-size:11px;color:var(--text3);">יעד יומי × (1 + אחוז שיפור) = יעד תחרות</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:var(--bg2);">
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);letter-spacing:.07em;text-transform:uppercase;">שם נציג</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);letter-spacing:.07em;text-transform:uppercase;">יעד יומי נוכחי</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--blue-tx);border-bottom:1px solid var(--border);letter-spacing:.07em;text-transform:uppercase;">% שיפור</th>
+            <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:var(--amber-tx);border-bottom:1px solid var(--border);letter-spacing:.07em;text-transform:uppercase;">🎯 יעד תחרות</th>
+          </tr>
+        </thead>
+        <tbody id="calc_goals_tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;">כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026</div>
+</div>
+
+<!-- CONTEST AGENT MODAL -->
+<div id="contestAgentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(3px);">
+  <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;width:320px;box-shadow:var(--shadow-md);direction:rtl;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h3 style="font-size:16px;font-weight:700;color:var(--text);" id="contest_modal_title">הוסף נציג לתחרות</h3>
+      <button onclick="closeContestModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">&times;</button>
+    </div>
+    <label style="font-size:11px;font-weight:600;color:var(--text3);display:block;margin-bottom:5px;">שם נציג</label>
+    <input type="text" id="contest_agent_name" placeholder="לדוגמה: דנה כהן"
+      style="width:100%;padding:9px 12px;font-size:14px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);margin-bottom:1rem;" />
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeContestModal()" class="btn">ביטול</button>
+      <button onclick="saveContestAgent()" class="btn btn-primary">שמור</button>
+    </div>
+  </div>
+</div>
 
 <!-- EDIT HISTORY MODAL -->
 <div id="editHistoryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(2px);">
@@ -1074,6 +1214,7 @@
     <button class="nav-tab" onclick="requireAuth('weekly')">לוח שבועי</button>
     <button class="nav-tab" onclick="requireAuth('goals')">יעדים חודשיים</button>
     <button onclick="requireAuth('tv')" id="tv_tab" class="nav-tab active">מצב TV</button>
+    <button class="nav-tab" onclick="requireAuth('contest')" style="color:var(--amber-tx);font-weight:600;">🏆 תחרויות</button>
   </div>
   <div class="nav-right">
     <span class="live-dot"></span>
@@ -1647,6 +1788,145 @@
 </div>
 
 
+
+<!-- ══════════════════════════════════════════
+     CONTEST PAGE
+══════════════════════════════════════════ -->
+<div id="page-contest" class="page">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:var(--radius-lg);padding:2rem 2.5rem;margin-bottom:1.75rem;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-20px;right:-20px;font-size:120px;opacity:.06;pointer-events:none;">🏆</div>
+    <div style="position:absolute;bottom:-30px;left:10px;font-size:80px;opacity:.05;pointer-events:none;">⭐</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:6px;">פריפיט מכירות</div>
+        <div style="font-size:30px;font-weight:800;color:#fff;letter-spacing:-.02em;display:flex;align-items:center;gap:12px;">
+          🏆 לוח תחרויות
+        </div>
+        <div style="font-size:13px;color:rgba(255,255,255,.55);margin-top:6px;" id="contest_subtitle">הגדר יעד וצפה במירוץ בין הנציגים</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button onclick="resetContest()" style="padding:7px 14px;font-size:12px;font-weight:600;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:var(--radius-sm);cursor:pointer;">🔄 איפוס</button>
+        <button onclick="saveContest()" style="padding:7px 16px;font-size:13px;font-weight:700;background:#BA7517;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;box-shadow:0 2px 8px rgba(186,117,23,.4);">💾 שמור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings strip -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:20px;flex-wrap:wrap;box-shadow:var(--shadow-sm);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">🎯</span>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px;">יעד תחרות</div>
+        <input type="number" min="0" id="contest_goal" value="100"
+          style="width:80px;padding:5px 8px;font-size:16px;font-weight:800;text-align:center;border:2px solid var(--amber);border-radius:var(--radius-sm);background:var(--bg);color:var(--amber-tx);"
+          oninput="calcContest()" />
+      </div>
+    </div>
+    <div style="width:1px;height:40px;background:var(--border);"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">📅</span>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px;">ימי עבודה בתחרות</div>
+        <input type="number" min="1" id="contest_days" value="5"
+          style="width:70px;padding:5px 8px;font-size:16px;font-weight:800;text-align:center;border:2px solid var(--blue);border-radius:var(--radius-sm);background:var(--bg);color:var(--blue-tx);"
+          oninput="calcContest()" />
+      </div>
+    </div>
+    <div style="width:1px;height:40px;background:var(--border);"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">📊</span>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px;">יעד יומי</div>
+        <div style="font-size:20px;font-weight:800;color:var(--text);" id="contest_total_goal_display">30</div>
+      </div>
+    </div>
+    <div style="width:1px;height:40px;background:var(--border);"></div>
+    <div style="margin-right:auto;display:flex;gap:8px;align-items:center;">
+      <button onclick="addContestAgent()" style="padding:7px 14px;font-size:12px;font-weight:600;background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;">+ הוסף נציג</button>
+      <span id="contest_save_status" style="font-size:11px;color:var(--green-tx);"></span>
+    </div>
+  </div>
+
+  <!-- Leaderboard cards -->
+  <div id="contest_leaderboard" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:1.5rem;"></div>
+
+  <!-- Table -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);">
+    <div style="padding:1rem 1.4rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">📋</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">טבלת תחרות מפורטת</div>
+        <div style="font-size:11px;color:var(--text3);">מכירות, יעדים ואחוזי עמידה</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:linear-gradient(90deg,#1a1a2e,#0f3460);">
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">#</th>
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">שם נציג</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">מכירות יומי</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">מכירות מצטבר</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">יעד יומי</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">יעד מצטבר</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:#f0c040;letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">% יומי</th>
+            <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#f0c040;letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">% מצטבר</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase;border-bottom:none;white-space:nowrap;">פעולות</th>
+          </tr>
+        </thead>
+        <tbody id="contest_tbody"></tbody>
+        <tfoot id="contest_tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- Calc Goals Table -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);margin-top:1.5rem;">
+    <div style="padding:1rem 1.4rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,rgba(24,95,165,.07),transparent);">
+      <span style="font-size:18px;">🎯</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">חישוב יעדי תחרות</div>
+        <div style="font-size:11px;color:var(--text3);">יעד יומי × (1 + אחוז שיפור) = יעד תחרות</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:var(--bg2);">
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);letter-spacing:.07em;text-transform:uppercase;">שם נציג</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);letter-spacing:.07em;text-transform:uppercase;">יעד יומי נוכחי</th>
+            <th style="padding:11px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--blue-tx);border-bottom:1px solid var(--border);letter-spacing:.07em;text-transform:uppercase;">% שיפור</th>
+            <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:var(--amber-tx);border-bottom:1px solid var(--border);letter-spacing:.07em;text-transform:uppercase;">🎯 יעד תחרות</th>
+          </tr>
+        </thead>
+        <tbody id="calc_goals_tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:.6rem 0;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1.5rem;">כל הזכויות לבניית המערכת שמורות לאדיר לוי &copy; 2026</div>
+</div>
+
+<!-- CONTEST AGENT MODAL -->
+<div id="contestAgentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(3px);">
+  <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;width:320px;box-shadow:var(--shadow-md);direction:rtl;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h3 style="font-size:16px;font-weight:700;color:var(--text);" id="contest_modal_title">הוסף נציג לתחרות</h3>
+      <button onclick="closeContestModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">&times;</button>
+    </div>
+    <label style="font-size:11px;font-weight:600;color:var(--text3);display:block;margin-bottom:5px;">שם נציג</label>
+    <input type="text" id="contest_agent_name" placeholder="לדוגמה: דנה כהן"
+      style="width:100%;padding:9px 12px;font-size:14px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);margin-bottom:1rem;" />
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeContestModal()" class="btn">ביטול</button>
+      <button onclick="saveContestAgent()" class="btn btn-primary">שמור</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT HISTORY MODAL -->
 <div id="editHistoryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(2px);">
   <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;width:460px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);direction:rtl;">
@@ -1719,6 +1999,7 @@ var isAuthed = window.isAuthed;
 var checkPw = window.checkPw;
 
 function requireAuth(tab) {
+  if (tab === 'contest') { loadContest(); }
   if (tab === 'tv') { doSwitchTab('tv'); return; }
   if (isAuthed()) { doSwitchTab(tab); return; }
   sessionStorage.setItem('pending_tab', tab);
@@ -1741,6 +2022,7 @@ function doSwitchTab(tab) {
   if (tab === 'stats') { refreshAgentSelect(); loadStats(); }
   if (tab === 'weekly') loadWeekly();
   if (tab === 'goals') renderGoals();
+  if (tab === 'contest') { loadContest(); }
   if (tab === 'tv') {
     updateTVFromSupabase();
     if(!window._tvPollInterval) {
@@ -2897,6 +3179,368 @@ function saveMonthlyGoal() {
   const ind = document.getElementById('monthly_goal_saved');
   if (ind) { ind.textContent = '✓ נשמר'; ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
   renderGoals();
+}
+
+
+/* ══════════════════════════════════════════
+   CONTEST PAGE JS
+══════════════════════════════════════════ */
+let contestAgents = [];
+let contestEditingId = null;
+let contestNextId = 1;
+
+const CONTEST_KEY = 'freefit_contest';
+const CONTEST_AVBG = ['#E6F1FB','#E1F5EE','#EEEDFE','#FAEEDA','#FAECE7','#EAF3DE','#FBEAF0'];
+const CONTEST_AVTX = ['#0C447C','#085041','#3C3489','#633806','#712B13','#27500A','#72243E'];
+const MEDAL = ['🥇','🥈','🥉'];
+
+function loadContest() {
+  try {
+    const saved = localStorage.getItem(CONTEST_KEY);
+    if (saved) {
+      const d = JSON.parse(saved);
+      contestAgents = d.agents || [];
+      contestNextId = (d.nextId || contestAgents.length) + 1;
+      const goalEl = document.getElementById('contest_goal');
+      const daysEl = document.getElementById('contest_days');
+      if (goalEl && d.goal) goalEl.value = d.goal;
+      if (daysEl && d.days) daysEl.value = d.days;
+    }
+    if (contestAgents.length === 0) {
+      // seed with main agents
+      agents.forEach((a, i) => {
+        contestAgents.push({ id: contestNextId++, name: a.name, daily: '', cumulative: '' });
+      });
+    }
+  } catch(e) {}
+  renderContest();
+}
+
+function saveContest() {
+  contestAgents.forEach(a => {
+    const dEl  = document.getElementById('cd_'+a.id);
+    const cEl  = document.getElementById('cc_'+a.id);
+    const dyEl = document.getElementById('cdy_'+a.id);
+    const tgEl = document.getElementById('ctg_'+a.id);
+    if (dEl)  a.daily        = dEl.value;
+    if (cEl)  a.cumulative   = cEl.value;
+    if (dyEl) a.dailyGoal    = dyEl.value;
+    if (tgEl) a.totalGoal    = tgEl.value;
+    const bgEl = document.getElementById('cbg_'+a.id);
+    const ipEl = document.getElementById('cip_'+a.id);
+    if (bgEl) a.calcBaseGoal = bgEl.value;
+    if (ipEl) a.improvePct   = ipEl.value;
+  });
+  const goal  = document.getElementById('contest_goal')?.value || '100';
+  const days  = document.getElementById('contest_days')?.value || '5';
+  localStorage.setItem(CONTEST_KEY, JSON.stringify({ agents: contestAgents, nextId: contestNextId, goal, days }));
+  const st = document.getElementById('contest_save_status');
+  if (st) { st.textContent = '✓ נשמר'; setTimeout(() => st.textContent = '', 2000); }
+}
+
+function resetContest() {
+  if (!confirm('לאפס את כל נתוני התחרות?')) return;
+  contestAgents.forEach(a => { a.daily = ''; a.cumulative = ''; });
+  renderContest();
+  saveContest();
+}
+
+function calcContest() {
+  const goal = parseInt(document.getElementById('contest_goal')?.value) || 0;
+  const days = parseInt(document.getElementById('contest_days')?.value) || 1;
+  const dailyGoal = days > 0 ? Math.ceil(goal / days) : 0;
+  const tg = document.getElementById('contest_total_goal_display');
+  if (tg) tg.textContent = dailyGoal;
+  renderContestRows();
+}
+
+function renderContest() {
+  calcContest();
+  renderLeaderboard();
+  renderCalcTable();
+}
+
+function renderContestRows() {
+  const goal      = parseInt(document.getElementById('contest_goal')?.value) || 0;
+  const days      = parseInt(document.getElementById('contest_days')?.value) || 1;
+  const dailyGoal = days > 0 ? Math.ceil(goal / days) : 0;
+  const totalGoal = goal;
+
+  const tbody = document.getElementById('contest_tbody');
+  const tfoot = document.getElementById('contest_tfoot');
+  if (!tbody) return;
+
+  // Sort by cumulative desc
+  const sorted = [...contestAgents].sort((a, b) => {
+    return (parseFloat(b.cumulative) || 0) - (parseFloat(a.cumulative) || 0);
+  });
+
+  tbody.innerHTML = '';
+  let sumDaily = 0, sumCumul = 0;
+
+  sorted.forEach((a, i) => {
+    const daily  = parseFloat(a.daily)      || 0;
+    const cumul  = parseFloat(a.cumulative) || 0;
+    sumDaily += daily; sumCumul += cumul;
+
+    const agDailyGoal = parseFloat((document.getElementById('cdy_'+a.id)||{}).value) || dailyGoal;
+    const agTotalGoal = parseFloat((document.getElementById('ctg_'+a.id)||{}).value) || totalGoal;
+    const pctDaily = agDailyGoal > 0 ? Math.min(Math.round(daily / agDailyGoal * 100), 999) : 0;
+    const pctCumul = agTotalGoal > 0 ? Math.min(Math.round(cumul / agTotalGoal * 100), 999) : 0;
+
+    const colDaily = pctDaily >= 100 ? '#3B6D11' : pctDaily >= 70 ? '#185FA5' : '#BA7517';
+    const colCumul = pctCumul >= 100 ? '#3B6D11' : pctCumul >= 70 ? '#185FA5' : '#BA7517';
+    const isTop = i === 0 && cumul > 0;
+    const rowBg = isTop ? 'background:rgba(186,117,23,.07);' : i % 2 === 1 ? 'background:var(--bg2);' : '';
+    const avBg = CONTEST_AVBG[i % CONTEST_AVBG.length];
+    const avTx = CONTEST_AVTX[i % CONTEST_AVTX.length];
+    const medal = MEDAL[i] || '';
+
+    tbody.innerHTML += `<tr style="${rowBg}border-bottom:1px solid var(--border);">
+      <td style="padding:10px 14px;text-align:right;font-size:14px;">${medal || (i+1)}</td>
+      <td style="padding:10px 14px;text-align:right;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:${avBg};color:${avTx};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">
+            ${a.name.split(' ').map(w=>w[0]).slice(0,2).join('')}
+          </div>
+          <span style="font-size:13px;font-weight:600;color:var(--text);">${a.name}</span>
+          ${isTop ? '<span style="background:#FAEEDA;color:#854F0B;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;margin-right:4px;">מוביל 🏆</span>' : ''}
+        </div>
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <input type="number" min="0" id="cd_${a.id}" value="${a.daily}"
+          style="width:68px;padding:5px 6px;font-size:14px;font-weight:700;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);"
+          oninput="onContestInput(${a.id})" placeholder="0" />
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <input type="number" min="0" id="cc_${a.id}" value="${a.cumulative}"
+          style="width:68px;padding:5px 6px;font-size:14px;font-weight:700;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);"
+          oninput="onContestInput(${a.id})" placeholder="0" />
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <input type="number" min="0" id="cdy_${a.id}" value="${a.dailyGoal !== undefined ? a.dailyGoal : dailyGoal}"
+          style="width:62px;padding:4px 5px;font-size:13px;font-weight:700;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--blue-tx);"
+          oninput="onContestInput(${a.id})" placeholder="${dailyGoal}" />
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <input type="number" min="0" id="ctg_${a.id}" value="${a.totalGoal !== undefined ? a.totalGoal : totalGoal}"
+          style="width:62px;padding:4px 5px;font-size:13px;font-weight:700;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--blue-tx);"
+          oninput="onContestInput(${a.id})" placeholder="${totalGoal}" />
+      </td>
+      <td style="padding:10px;text-align:center;" id="cpd_${a.id}">
+        <div style="font-size:13px;font-weight:800;color:${colDaily};">${agDailyGoal>0?pctDaily+'%':'—'}</div>
+        <div style="height:4px;background:var(--bg3);border-radius:99px;margin-top:3px;width:48px;margin-inline:auto;overflow:hidden;">
+          <div style="height:4px;width:${Math.min(pctDaily,100)}%;background:${colDaily};border-radius:99px;"></div>
+        </div>
+      </td>
+      <td style="padding:10px 14px;text-align:center;" id="cpc_${a.id}">
+        <div style="font-size:14px;font-weight:800;color:${colCumul};">${agTotalGoal>0?pctCumul+'%':'—'}</div>
+        <div style="height:4px;background:var(--bg3);border-radius:99px;margin-top:3px;width:52px;margin-inline:auto;overflow:hidden;">
+          <div style="height:4px;width:${Math.min(pctCumul,100)}%;background:${colCumul};border-radius:99px;"></div>
+        </div>
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <div style="display:flex;gap:5px;justify-content:center;">
+          <button onclick="editContestAgent(${a.id})" style="width:28px;height:28px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;font-size:13px;" title="עריכת שם">✏️</button>
+          <button onclick="removeContestAgent(${a.id})" style="width:28px;height:28px;border:1px solid rgba(226,75,74,.3);border-radius:var(--radius-sm);background:transparent;cursor:pointer;font-size:13px;" title="הסרה">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  // Summary row
+  const sumPctD = goal > 0 && contestAgents.length > 0 ? Math.round(sumDaily / contestAgents.length / goal * 100) : 0;
+  const sumPctC = totalGoal > 0 && contestAgents.length > 0 ? Math.round(sumCumul / contestAgents.length / totalGoal * 100) : 0;
+  tfoot.innerHTML = `<tr style="background:var(--bg2);border-top:2px solid var(--border2);">
+    <td colspan="2" style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--blue-bg);color:var(--blue-tx);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">∑</div>
+        סיכום צוות
+      </div>
+    </td>
+    <td style="padding:10px;text-align:center;font-size:14px;font-weight:800;color:var(--blue);">${sumDaily}</td>
+    <td style="padding:10px;text-align:center;font-size:14px;font-weight:800;color:var(--blue);">${sumCumul}</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text3);">—</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text3);">—</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:800;color:${sumPctD>=100?'#3B6D11':sumPctD>=70?'#185FA5':'#BA7517'};">${goal>0?sumPctD+'%':'—'}</td>
+    <td style="padding:10px 14px;text-align:center;font-size:13px;font-weight:800;color:${sumPctC>=100?'#3B6D11':sumPctC>=70?'#185FA5':'#BA7517'};">${totalGoal>0?sumPctC+'%':'—'}</td>
+    <td></td>
+  </tr>`;
+}
+
+function renderLeaderboard() {
+  const lb = document.getElementById('contest_leaderboard');
+  if (!lb) return;
+  const totalGoal = (parseInt(document.getElementById('contest_goal')?.value)||0) * (parseInt(document.getElementById('contest_days')?.value)||1);
+  const sorted = [...contestAgents].sort((a,b) => (parseFloat(b.cumulative)||0) - (parseFloat(a.cumulative)||0));
+  lb.innerHTML = '';
+  sorted.slice(0,5).forEach((a, i) => {
+    const cumul = parseFloat(a.cumulative) || 0;
+    const pct = totalGoal > 0 ? Math.min(Math.round(cumul/totalGoal*100),100) : 0;
+    const col = pct>=100?'#3B6D11':pct>=70?'#185FA5':'#BA7517';
+    const borderTop = i===0?'3px solid #BA7517':i===1?'3px solid #9a9992':i===2?'3px solid #993C1D':'1px solid var(--border)';
+    const avBg = CONTEST_AVBG[i%CONTEST_AVBG.length];
+    const avTx = CONTEST_AVTX[i%CONTEST_AVTX.length];
+    lb.innerHTML += `<div style="background:var(--bg);border-top:${borderTop};border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;box-shadow:var(--shadow-sm);text-align:center;">
+      <div style="font-size:28px;margin-bottom:6px;">${MEDAL[i]||'#'+(i+1)}</div>
+      <div style="width:44px;height:44px;border-radius:50%;background:${avBg};color:${avTx};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;margin:0 auto 8px;">${a.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">${a.name.split(' ')[0]}</div>
+      <div style="font-size:26px;font-weight:800;color:${col};line-height:1;">${cumul}</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px;">מכירות מצטברות</div>
+      <div style="height:5px;background:var(--bg3);border-radius:99px;overflow:hidden;">
+        <div style="height:5px;width:${pct}%;background:${col};border-radius:99px;transition:width .5s;"></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:${col};margin-top:4px;">${pct}%</div>
+    </div>`;
+  });
+}
+
+function onContestInput(id) {
+  const a = contestAgents.find(x => x.id === id);
+  if (!a) return;
+  const dEl  = document.getElementById('cd_'+id);
+  const cEl  = document.getElementById('cc_'+id);
+  const dyEl = document.getElementById('cdy_'+id);
+  const tgEl = document.getElementById('ctg_'+id);
+  if (dEl)  a.daily      = dEl.value;
+  if (cEl)  a.cumulative = cEl.value;
+  if (dyEl) a.dailyGoal  = dyEl.value;
+  if (tgEl) a.totalGoal  = tgEl.value;
+  // Update pct cells inline without re-rendering the whole table
+  updateContestPcts(a);
+  renderLeaderboard();
+  clearTimeout(a._saveTimer);
+  a._saveTimer = setTimeout(saveContest, 800);
+}
+
+function updateContestPcts(a) {
+  const daily  = parseFloat(a.daily)      || 0;
+  const cumul  = parseFloat(a.cumulative) || 0;
+  const dyGoal = parseFloat(a.dailyGoal)  || 0;
+  const tgGoal = parseFloat(a.totalGoal)  || 0;
+  const pctD = dyGoal > 0 ? Math.min(Math.round(daily / dyGoal * 100), 999) : 0;
+  const pctC = tgGoal > 0 ? Math.min(Math.round(cumul / tgGoal * 100), 999) : 0;
+  const colD = pctD>=100?'#3B6D11':pctD>=70?'#185FA5':'#BA7517';
+  const colC = pctC>=100?'#3B6D11':pctC>=70?'#185FA5':'#BA7517';
+  const pdEl = document.getElementById('cpd_'+a.id);
+  const pcEl = document.getElementById('cpc_'+a.id);
+  if (pdEl) pdEl.innerHTML = `<div style="font-size:13px;font-weight:800;color:${colD};">${dyGoal>0?pctD+'%':'—'}</div><div style="height:4px;background:var(--bg3);border-radius:99px;margin-top:3px;width:48px;margin-inline:auto;overflow:hidden;"><div style="height:4px;width:${Math.min(pctD,100)}%;background:${colD};border-radius:99px;"></div></div>`;
+  if (pcEl) pcEl.innerHTML = `<div style="font-size:14px;font-weight:800;color:${colC};">${tgGoal>0?pctC+'%':'—'}</div><div style="height:4px;background:var(--bg3);border-radius:99px;margin-top:3px;width:52px;margin-inline:auto;overflow:hidden;"><div style="height:4px;width:${Math.min(pctC,100)}%;background:${colC};border-radius:99px;"></div></div>`;
+  // Also update calc table if open
+  updateCalcRow(a);
+}
+
+function addContestAgent() {
+  contestEditingId = null;
+  document.getElementById('contest_modal_title').textContent = 'הוסף נציג לתחרות';
+  document.getElementById('contest_agent_name').value = '';
+  document.getElementById('contestAgentModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('contest_agent_name').focus(), 50);
+}
+
+function editContestAgent(id) {
+  contestEditingId = id;
+  const a = contestAgents.find(x => x.id === id);
+  document.getElementById('contest_modal_title').textContent = 'עריכת שם נציג';
+  document.getElementById('contest_agent_name').value = a ? a.name : '';
+  document.getElementById('contestAgentModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('contest_agent_name').focus(), 50);
+}
+
+function removeContestAgent(id) {
+  if (!confirm('להסיר נציג זה מהתחרות?')) return;
+  contestAgents = contestAgents.filter(a => a.id !== id);
+  renderContest();
+  saveContest();
+}
+
+function closeContestModal() {
+  document.getElementById('contestAgentModal').style.display = 'none';
+}
+
+function saveContestAgent() {
+  const name = document.getElementById('contest_agent_name').value.trim();
+  if (!name) return;
+  if (contestEditingId) {
+    const a = contestAgents.find(x => x.id === contestEditingId);
+    if (a) a.name = name;
+  } else {
+    contestAgents.push({ id: contestNextId++, name, daily: '', cumulative: '' });
+  }
+  closeContestModal();
+  renderContest();
+  saveContest();
+}
+
+document.getElementById('contest_agent_name')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveContestAgent();
+  if (e.key === 'Escape') closeContestModal();
+});
+
+
+/* ── CALC GOALS TABLE ── */
+function renderCalcTable() {
+  const tbody = document.getElementById('calc_goals_tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const goal  = parseInt(document.getElementById('contest_goal')?.value) || 0;
+  const days  = parseInt(document.getElementById('contest_days')?.value) || 1;
+  const defaultDaily = days > 0 ? Math.ceil(goal / days) : 0;
+
+  contestAgents.forEach((a, i) => {
+    const avBg = CONTEST_AVBG[i % CONTEST_AVBG.length];
+    const avTx = CONTEST_AVTX[i % CONTEST_AVTX.length];
+    const baseGoal = parseFloat(a.dailyGoal) || defaultDaily;
+    const pct = parseFloat(a.improvePct) || 0;
+    const contestGoal = Math.round(baseGoal * (1 + pct / 100));
+    tbody.innerHTML += `<tr style="${i%2===1?'background:var(--bg2);':''}border-bottom:1px solid var(--border);">
+      <td style="padding:10px 14px;text-align:right;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:30px;height:30px;border-radius:50%;background:${avBg};color:${avTx};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">${a.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <span style="font-size:13px;font-weight:600;color:var(--text);">${a.name}</span>
+        </div>
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <input type="number" min="0" id="cbg_${a.id}" value="${baseGoal}"
+          style="width:68px;padding:5px 6px;font-size:14px;font-weight:700;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);"
+          oninput="onCalcInput(${a.id})" placeholder="0" />
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+          <input type="number" min="0" max="999" id="cip_${a.id}" value="${pct}"
+            style="width:62px;padding:5px 6px;font-size:14px;font-weight:700;text-align:center;border:2px solid var(--blue);border-radius:var(--radius-sm);background:var(--bg);color:var(--blue-tx);"
+            oninput="onCalcInput(${a.id})" placeholder="0" />
+          <span style="font-size:13px;font-weight:700;color:var(--text2);">%</span>
+        </div>
+      </td>
+      <td style="padding:10px 14px;text-align:center;" id="cct_${a.id}">
+        <span style="font-size:20px;font-weight:800;color:var(--amber-tx);">${contestGoal}</span>
+      </td>
+    </tr>`;
+  });
+}
+
+function onCalcInput(id) {
+  const a = contestAgents.find(x => x.id === id);
+  if (!a) return;
+  const bgEl = document.getElementById('cbg_'+id);
+  const ipEl = document.getElementById('cip_'+id);
+  if (bgEl) a.calcBaseGoal = bgEl.value;
+  if (ipEl) a.improvePct   = ipEl.value;
+  updateCalcRow(a);
+  clearTimeout(a._saveTimer);
+  a._saveTimer = setTimeout(saveContest, 800);
+}
+
+function updateCalcRow(a) {
+  const bgEl = document.getElementById('cbg_'+a.id);
+  const ipEl = document.getElementById('cip_'+a.id);
+  const ctEl = document.getElementById('cct_'+a.id);
+  if (!ctEl) return;
+  const base = parseFloat(bgEl?.value || a.calcBaseGoal || a.dailyGoal) || 0;
+  const pct  = parseFloat(ipEl?.value || a.improvePct) || 0;
+  const result = Math.round(base * (1 + pct / 100));
+  ctEl.innerHTML = `<span style="font-size:20px;font-weight:800;color:var(--amber-tx);">${result}</span>`;
 }
 
 /* ── AGENTS FROM SUPABASE ── */
