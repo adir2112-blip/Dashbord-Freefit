@@ -434,10 +434,13 @@
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <button class="btn" onclick="resetDay()" style="border-color:#E24B4A;color:#A32D2D;" title="איפוס כל הנתונים ליום חדש">איפוס יומי</button>
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <span id="autosave_indicator" style="font-size:11px;color:var(--green-tx);opacity:0;transition:opacity .4s;"></span>
       <button class="btn" onclick="resetDay()" style="border-color:#E24B4A;color:#A32D2D;">איפוס יומי</button>
       <button class="btn btn-primary" onclick="openAdd()">+ הוסף נציג</button>
+      <button onclick="saveToday()" style="padding:8px 20px;font-size:14px;font-weight:700;background:#1D9E75;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;box-shadow:0 2px 8px rgba(29,158,117,.35);display:flex;align-items:center;gap:6px;">
+        💾 שמור נתוני יום
+      </button>
     </div>
     </div>
   </div>
@@ -1234,10 +1237,13 @@
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <button class="btn" onclick="resetDay()" style="border-color:#E24B4A;color:#A32D2D;" title="איפוס כל הנתונים ליום חדש">איפוס יומי</button>
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <span id="autosave_indicator" style="font-size:11px;color:var(--green-tx);opacity:0;transition:opacity .4s;"></span>
       <button class="btn" onclick="resetDay()" style="border-color:#E24B4A;color:#A32D2D;">איפוס יומי</button>
       <button class="btn btn-primary" onclick="openAdd()">+ הוסף נציג</button>
+      <button onclick="saveToday()" style="padding:8px 20px;font-size:14px;font-weight:700;background:#1D9E75;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;box-shadow:0 2px 8px rgba(29,158,117,.35);display:flex;align-items:center;gap:6px;">
+        💾 שמור נתוני יום
+      </button>
     </div>
     </div>
   </div>
@@ -2491,8 +2497,10 @@ async function saveToday() {
     }));
 
     await supaFetch('daily_stats', {method:'POST', body:JSON.stringify(rows), prefer:'return=minimal'});
-    status.textContent = '✓ נשמר בהצלחה — ' + new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    const timeStr = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    status.textContent = '✓ נשמר בהצלחה — ' + timeStr;
     status.style.color = 'var(--green-tx)';
+    showSaveToast(timeStr);
     refreshAgentSelect();
   } catch(e) {
     status.textContent = '✗ שגיאה בשמירה: ' + e.message.slice(0,60);
@@ -2501,7 +2509,7 @@ async function saveToday() {
   btn.disabled = false; btn.textContent = 'שמור נתוני יום';
 }
 
-/* ── AUTO-SAVE AT 18:00 ── */
+/* ── AUTO-SAVE AT 18:00 + EVERY HOUR ── */
 function scheduleAutoSave() {
   const now = new Date();
   const target = new Date(now);
@@ -2511,6 +2519,10 @@ function scheduleAutoSave() {
   setTimeout(() => { saveToday(); scheduleAutoSave(); }, ms);
 }
 scheduleAutoSave();
+// Also save every hour automatically
+setInterval(() => {
+  if (agents.length > 0) saveToday();
+}, 3600000);
 
 /* ── POPULATE AGENT SELECT ── */
 function refreshAgentSelect() {
@@ -3541,6 +3553,22 @@ function updateCalcRow(a) {
   const pct  = parseFloat(ipEl?.value || a.improvePct) || 0;
   const result = Math.round(base * (1 + pct / 100));
   ctEl.innerHTML = `<span style="font-size:20px;font-weight:800;color:var(--amber-tx);">${result}</span>`;
+}
+
+
+/* ── SAVE TOAST ── */
+function showSaveToast(timeStr) {
+  let toast = document.getElementById('save_toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'save_toast';
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1D9E75;color:#fff;padding:12px 24px;border-radius:99px;font-size:14px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:9998;transition:opacity .4s;display:flex;align-items:center;gap:8px;';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = '✓ נתוני היום נשמרו בהצלחה · ' + timeStr;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.style.opacity = '0', 3000);
 }
 
 /* ── AGENTS FROM SUPABASE ── */
