@@ -6,6 +6,7 @@
 <title>פריפיט מכירות — דשבורד יומי</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23185FA5'/%3E%3Crect x='3' y='17' width='6' height='11' rx='2' fill='white' opacity='.9'/%3E%3Crect x='13' y='11' width='6' height='17' rx='2' fill='white'/%3E%3Crect x='23' y='4' width='6' height='24' rx='2' fill='white' opacity='.8'/%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -1982,6 +1983,9 @@
 </div>
 
 <script>
+// Register Chart.js datalabels plugin
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+
 /* ── PASSWORD — defined FIRST so button works even if rest of script fails ── */
 window.CORRECT_PW = 'Q1w2e3r4!';
 window.isAuthed = function() { try { const s=sessionStorage.getItem('freefit_auth'); return s && atob(s)===window.CORRECT_PW; } catch(e){return false;} };
@@ -2505,8 +2509,7 @@ async function saveToday() {
       total_sales: (parseInt(document.getElementById('leads_'+a.id)?.value)||0)+
                    (parseInt(document.getElementById('renew_'+a.id)?.value)||0)+
                    (parseInt(document.getElementById('hmo_'+a.id)?.value)||0),
-      daily_leads: dailyLeads,
-      absent: (document.getElementById('status_'+a.id) ? document.getElementById('status_'+a.id).value !== 'active' : false)
+      daily_leads: dailyLeads
     }));
 
     await supaFetch('daily_stats', {method:'POST', body:JSON.stringify(rows), prefer:'return=minimal'});
@@ -2816,17 +2819,23 @@ async function loadWeekly() {
   document.getElementById('weekly_time_badge').textContent = 'עודכן: '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
 
   // Find Sunday of current week (week starts Sunday in Israel)
+  // Use LOCAL date to avoid UTC timezone issues
+  function toLocalDateStr(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+day;
+  }
   const days = [];
-  const weekStart = new Date(now);
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dow = weekStart.getDay(); // 0=Sun,1=Mon,...,6=Sat
-  // If Saturday (6), go back to Sunday; otherwise go back to this week's Sunday
-  weekStart.setDate(weekStart.getDate() - (dow === 6 ? 6 : dow));
-  weekStart.setHours(0,0,0,0);
-  // Add Sun(0) Mon(1) Tue(2) Wed(3) Thu(4)
+  // Go back to this week's Sunday (if Saturday, go to previous Sunday)
+  const daysBack = dow === 0 ? 0 : dow === 6 ? 6 : dow;
+  weekStart.setDate(weekStart.getDate() - daysBack);
+  // Add Sun(0) Mon(1) Tue(2) Wed(3) Thu(4) only
   for (let i=0; i<5; i++) {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate()+i);
-    days.push(d.toISOString().slice(0,10));
+    const d = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate()+i);
+    days.push(toLocalDateStr(d));
   }
 
   let allRows = [];
@@ -2836,7 +2845,7 @@ async function loadWeekly() {
     // Fetch previous week (7 days before)
     const prevStart = new Date(days[0]); prevStart.setDate(prevStart.getDate()-7);
     const prevEnd   = new Date(days[days.length-1]); prevEnd.setDate(prevEnd.getDate()-7);
-    prevRows = await supaFetch('daily_stats?date=gte.'+prevStart.toISOString().slice(0,10)+'&date=lte.'+prevEnd.toISOString().slice(0,10), {headers:{'Prefer':'return=representation'}}) || [];
+    prevRows = await supaFetch('daily_stats?date=gte.'+toLocalDateStr(prevStart)+'&date=lte.'+toLocalDateStr(prevEnd), {headers:{'Prefer':'return=representation'}}) || [];
   } catch(e) {}
 
   // Build prev week totals by day-of-week index
@@ -2866,7 +2875,7 @@ async function loadWeekly() {
   });
   const totals = days.map(d=>byDay[d].total);
   const avg = totals.reduce((s,v)=>s+v,0)/totals.length;
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = toLocalDateStr(new Date());
 
   const container = document.getElementById('weekly_day_cards');
   container.innerHTML = '';
@@ -2899,8 +2908,21 @@ async function loadWeekly() {
       {label:'מכירות',data:totals,backgroundColor:days.map(d=>d===todayStr?'#185FA5':'rgba(24,95,165,.35)'),borderRadius:6,borderSkipped:false},
       {type:'line',label:'ממוצע',data:days.map(()=>parseFloat(avg.toFixed(1))),borderColor:'#BA7517',borderDash:[5,4],borderWidth:2,pointRadius:0,fill:false}
     ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{rtl:true}},
-      scales:{x:{ticks:{color:tc,font:{size:11}},grid:{display:false}},y:{ticks:{color:tc,font:{size:11},stepSize:1,callback:v=>Number.isInteger(v)?v:''},grid:{color:gc},min:0}}}
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{rtl:true},
+        datalabels:{
+          display: ctx => ctx.datasetIndex === 0,
+          color: ctx => days[ctx.dataIndex]===todayStr ? '#fff' : '#185FA5',
+          anchor:'end',
+          align:'top',
+          offset: 2,
+          font:{size:14,weight:'bold'},
+          formatter: v => v > 0 ? v : ''
+        }
+      },
+      scales:{x:{ticks:{color:tc,font:{size:11}},grid:{display:false}},y:{ticks:{color:tc,font:{size:11},stepSize:1,callback:v=>Number.isInteger(v)?v:''},grid:{color:gc},min:0,grace:'15%'}}}
   });
 
   const head = document.getElementById('weekly_tbl_head');
@@ -3667,6 +3689,7 @@ let _supaDebounce = null;
 function debouncedSupaSave() {
   clearTimeout(_supaDebounce);
   _supaDebounce = setTimeout(async () => { // 500ms debounce
+    console.log('💾 AutoSave check - pauseAutosave:', _pauseAutosave, 'agents:', agents.length);
     if (_pauseAutosave) return;
     try {
       const today = new Date().toISOString().slice(0,10);
