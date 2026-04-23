@@ -2022,13 +2022,23 @@ function doSwitchTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t => {
     if (t.getAttribute('onclick') && t.getAttribute('onclick').includes("'"+tab+"'")) t.classList.add('active');
   });
-  // Sync fresh data on every tab switch
-  if (tab !== 'tv') syncFromSupabase();
-  if (tab === 'dashboard') updateDashboard();
-  if (tab === 'stats') { refreshAgentSelect(); loadStats(); }
-  if (tab === 'weekly') loadWeekly();
-  if (tab === 'goals') renderGoals();
-  if (tab === 'contest') { loadContest(); }
+  // Save first, then load page content
+  if (tab === 'dashboard') { updateDashboard(); }
+  else if (tab === 'stats') {
+    // Save then load
+    clearTimeout(_supaDebounce);
+    saveToday().then(() => { refreshAgentSelect(); loadStats(); }).catch(() => { refreshAgentSelect(); loadStats(); });
+  }
+  else if (tab === 'weekly') {
+    // Save then load weekly
+    clearTimeout(_supaDebounce);
+    saveToday().then(() => loadWeekly()).catch(() => loadWeekly());
+  }
+  else if (tab === 'goals') {
+    clearTimeout(_supaDebounce);
+    saveToday().then(() => renderGoals()).catch(() => renderGoals());
+  }
+  else if (tab === 'contest') { loadContest(); }
   if (tab === 'tv') {
     updateTVFromSupabase();
     if(!window._tvPollInterval) {
@@ -2137,6 +2147,9 @@ function calcAll() {
   document.getElementById('s_total').textContent = sTotal || '—';
   document.getElementById('s_cph').textContent   = avgCph;
   document.getElementById('s_cph_note').textContent = cphCnt > 0 ? 'ממוצע' : '';
+
+  // ── SAVE IMMEDIATELY ──
+  saveTodayInputs();
 
   // ── SALE SOUND + ANIMATION ──
   const prevTotal = window._prevTotal || 0;
@@ -3288,15 +3301,18 @@ function renderContestRows() {
   });
 
   tbody.innerHTML = '';
-  let sumDaily = 0, sumCumul = 0;
+  let sumDaily = 0, sumCumul = 0, sumDailyGoal = 0, sumTotalGoal = 0;
 
   sorted.forEach((a, i) => {
+    // Always use stored values for sum (inputs may not exist yet)
     const daily  = parseFloat(a.daily)      || 0;
     const cumul  = parseFloat(a.cumulative) || 0;
     sumDaily += daily; sumCumul += cumul;
 
     const agDailyGoal = parseFloat((document.getElementById('cdy_'+a.id)||{}).value) || dailyGoal;
     const agTotalGoal = parseFloat((document.getElementById('ctg_'+a.id)||{}).value) || totalGoal;
+    sumDailyGoal += agDailyGoal;
+    sumTotalGoal += agTotalGoal;
     const pctDaily = agDailyGoal > 0 ? Math.min(Math.round(daily / agDailyGoal * 100), 999) : 0;
     const pctCumul = agTotalGoal > 0 ? Math.min(Math.round(cumul / agTotalGoal * 100), 999) : 0;
 
@@ -3361,8 +3377,8 @@ function renderContestRows() {
   });
 
   // Summary row
-  const sumPctD = goal > 0 && contestAgents.length > 0 ? Math.round(sumDaily / contestAgents.length / goal * 100) : 0;
-  const sumPctC = totalGoal > 0 && contestAgents.length > 0 ? Math.round(sumCumul / contestAgents.length / totalGoal * 100) : 0;
+  const sumPctD = sumDailyGoal > 0 ? Math.min(Math.round(sumDaily / sumDailyGoal * 100), 999) : 0;
+  const sumPctC = sumTotalGoal > 0 ? Math.min(Math.round(sumCumul / sumTotalGoal * 100), 999) : 0;
   tfoot.innerHTML = `<tr style="background:var(--bg2);border-top:2px solid var(--border2);">
     <td colspan="2" style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text);">
       <div style="display:flex;align-items:center;gap:8px;">
@@ -3370,12 +3386,12 @@ function renderContestRows() {
         סיכום צוות
       </div>
     </td>
-    <td style="padding:10px;text-align:center;font-size:14px;font-weight:800;color:var(--blue);">${sumDaily}</td>
-    <td style="padding:10px;text-align:center;font-size:14px;font-weight:800;color:var(--blue);">${sumCumul}</td>
-    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text3);">—</td>
-    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text3);">—</td>
-    <td style="padding:10px;text-align:center;font-size:13px;font-weight:800;color:${sumPctD>=100?'#3B6D11':sumPctD>=70?'#185FA5':'#BA7517'};">${goal>0?sumPctD+'%':'—'}</td>
-    <td style="padding:10px 14px;text-align:center;font-size:13px;font-weight:800;color:${sumPctC>=100?'#3B6D11':sumPctC>=70?'#185FA5':'#BA7517'};">${totalGoal>0?sumPctC+'%':'—'}</td>
+    <td style="padding:10px;text-align:center;font-size:16px;font-weight:800;color:var(--blue);">${sumDaily}</td>
+    <td style="padding:10px;text-align:center;font-size:16px;font-weight:800;color:var(--blue);">${sumCumul}</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text3);">${sumDailyGoal||'—'}</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text3);">${sumTotalGoal||'—'}</td>
+    <td style="padding:10px;text-align:center;font-size:14px;font-weight:800;color:${sumPctD>=100?'#3B6D11':sumPctD>=70?'#185FA5':'#BA7517'};">${sumDailyGoal>0?sumPctD+'%':'—'}</td>
+    <td style="padding:10px 14px;text-align:center;font-size:14px;font-weight:800;color:${sumPctC>=100?'#3B6D11':sumPctC>=70?'#185FA5':'#BA7517'};">${sumTotalGoal>0?sumPctC+'%':'—'}</td>
     <td></td>
   </tr>`;
 }
@@ -3420,9 +3436,51 @@ function onContestInput(id) {
   if (tgEl) a.totalGoal  = tgEl.value;
   // Update pct cells inline without re-rendering the whole table
   updateContestPcts(a);
+  updateContestSummary();
   renderLeaderboard();
   clearTimeout(a._saveTimer);
   a._saveTimer = setTimeout(saveContest, 800);
+}
+
+
+function updateContestSummary() {
+  const tfoot = document.getElementById('contest_tfoot');
+  if (!tfoot) return;
+  const goal    = parseInt(document.getElementById('contest_goal')?.value) || 0;
+  const days    = parseInt(document.getElementById('contest_days')?.value) || 1;
+  const dailyGoal  = days > 0 ? Math.ceil(goal / days) : 0;
+  const totalGoal  = goal;
+
+  let sumDaily = 0, sumCumul = 0, sumDailyGoal = 0, sumTotalGoal = 0;
+  contestAgents.forEach(a => {
+    sumDaily += parseFloat(a.daily) || 0;
+    sumCumul += parseFloat(a.cumulative) || 0;
+    const agDG = parseFloat(a.dailyGoal) || dailyGoal;
+    const agTG = parseFloat(a.totalGoal) || totalGoal;
+    sumDailyGoal += agDG;
+    sumTotalGoal += agTG;
+  });
+
+  const sumPctD = sumDailyGoal > 0 ? Math.min(Math.round(sumDaily / sumDailyGoal * 100), 999) : 0;
+  const sumPctC = sumTotalGoal > 0 ? Math.min(Math.round(sumCumul / sumTotalGoal * 100), 999) : 0;
+  const colD = sumPctD>=100?'#3B6D11':sumPctD>=70?'#185FA5':'#BA7517';
+  const colC = sumPctC>=100?'#3B6D11':sumPctC>=70?'#185FA5':'#BA7517';
+
+  tfoot.innerHTML = `<tr style="background:var(--bg2);border-top:2px solid var(--border2);">
+    <td colspan="2" style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--blue-bg);color:var(--blue-tx);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">∑</div>
+        סיכום צוות
+      </div>
+    </td>
+    <td style="padding:10px;text-align:center;font-size:16px;font-weight:800;color:var(--blue);">${sumDaily}</td>
+    <td style="padding:10px;text-align:center;font-size:16px;font-weight:800;color:var(--blue);">${sumCumul}</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text3);">${sumDailyGoal||'—'}</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text3);">${sumTotalGoal||'—'}</td>
+    <td style="padding:10px;text-align:center;font-size:14px;font-weight:800;color:${colD};">${sumDailyGoal>0?sumPctD+'%':'—'}</td>
+    <td style="padding:10px 14px;text-align:center;font-size:14px;font-weight:800;color:${colC};">${sumTotalGoal>0?sumPctC+'%':'—'}</td>
+    <td></td>
+  </tr>`;
 }
 
 function updateContestPcts(a) {
@@ -3608,7 +3666,7 @@ function saveTodayInputs() {
 let _supaDebounce = null;
 function debouncedSupaSave() {
   clearTimeout(_supaDebounce);
-  _supaDebounce = setTimeout(async () => {
+  _supaDebounce = setTimeout(async () => { // 500ms debounce
     if (_pauseAutosave) return;
     try {
       const today = new Date().toISOString().slice(0,10);
@@ -3631,7 +3689,7 @@ function debouncedSupaSave() {
       const ind = document.getElementById('autosave_indicator');
       if(ind){ ind.textContent='✓ נשמר אוטומטית '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',3000); }
     } catch(e) { console.warn('autosave error',e); }
-  }, 2000);
+  }, 500);
 }
 
 
@@ -3750,7 +3808,10 @@ function restoreTodayInputs() {
     calcAll();
   } catch(e) {}
 }
-document.addEventListener('input', () => saveTodayInputs());
+document.addEventListener('input', () => {
+  window._lastUserInput = Date.now();
+  saveTodayInputs();
+});
 
 
 /* ── REAL-TIME SYNC — every 2 minutes ── */
@@ -3767,17 +3828,21 @@ async function syncFromSupabase() {
       if (dailyLeadsTotal > 0) dlEl.value = dailyLeadsTotal;
     }
 
-    agents.forEach(a => {
-      const r = rows.find(x => x.agent_name === a.name);
-      if (!r) return;
-      const fields = {calls:'calls', hours:'hours', leads:'leads', renew:'renewals', hmo:'hmo'};
-      Object.entries(fields).forEach(([field, col]) => {
-        const el = document.getElementById(field+'_'+a.id);
-        if (el) el.value = r[col] || '';
+    // Only sync if user hasn't typed recently (within 15 seconds)
+    const now = Date.now();
+    const timeSinceInput = now - (window._lastUserInput || 0);
+    if (timeSinceInput > 15000) {
+      agents.forEach(a => {
+        const r = rows.find(x => x.agent_name === a.name);
+        if (!r) return;
+        const fields = {calls:'calls', hours:'hours', leads:'leads', renew:'renewals', hmo:'hmo'};
+        Object.entries(fields).forEach(([field, col]) => {
+          const el = document.getElementById(field+'_'+a.id);
+          if (el) el.value = r[col] || '';
+        });
       });
-    });
-
-    calcAll();
+      calcAll();
+    }
 
     // Update active page specifically
     const activePage = document.querySelector('.page.active');
@@ -3808,6 +3873,33 @@ loadYesterdayDelta();
 setTimeout(()=>doSwitchTab('tv'),100);
 // Real-time sync starts via setInterval in syncFromSupabase block above
 setTimeout(syncFromSupabase, 3000);
+
+// Force save when page is closed/refreshed
+window.addEventListener('beforeunload', () => {
+  if (agents.length > 0) {
+    clearTimeout(_supaDebounce);
+    const today = new Date().toISOString().slice(0,10);
+    const dailyLeads = parseInt(document.getElementById('dailyLeads')?.value)||0;
+    const rows = agents.map(a => ({
+      date: today, agent_name: a.name,
+      calls:    parseInt(document.getElementById('calls_'+a.id)?.value)||0,
+      hours:    parseFloat(document.getElementById('hours_'+a.id)?.value)||0,
+      leads:    parseInt(document.getElementById('leads_'+a.id)?.value)||0,
+      renewals: parseInt(document.getElementById('renew_'+a.id)?.value)||0,
+      hmo:      parseInt(document.getElementById('hmo_'+a.id)?.value)||0,
+      total_sales: (parseInt(document.getElementById('leads_'+a.id)?.value)||0)+
+                   (parseInt(document.getElementById('renew_'+a.id)?.value)||0)+
+                   (parseInt(document.getElementById('hmo_'+a.id)?.value)||0),
+      daily_leads: dailyLeads
+    }));
+    // Use sendBeacon for reliable delivery on page close
+    const payload = JSON.stringify(rows);
+    navigator.sendBeacon && navigator.sendBeacon(
+      'https://fmejfxejsrmjvexfizgj.supabase.co/rest/v1/daily_stats',
+      new Blob([payload], {type:'application/json'})
+    );
+  }
+});
 </script>
 </body>
 </html>
