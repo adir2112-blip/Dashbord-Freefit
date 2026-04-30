@@ -385,8 +385,7 @@
     <div style="font-size:22px;font-weight:800;color:#111110;margin-bottom:1.5rem;letter-spacing:-.03em;">כניסה למערכת</div>
     <input type="password" id="pwInput" placeholder="סיסמת מנהל"
       onkeydown="if(event.key==='Enter')checkPw()"
-      style="width:100%;padding:10px 14px;font-size:15px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;text-align:center;margin-bottom:10px;background:#fff;color:#1a1a18;"
-      onkeydown="if(event.key==='Enter')checkPw()" />
+      style="width:100%;padding:10px 14px;font-size:15px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;text-align:center;margin-bottom:10px;background:#fff;color:#1a1a18;" />
     <div id="pwError" style="font-size:12px;color:#E24B4A;margin-bottom:10px;min-height:16px;"></div>
     <button id="pw_btn" onclick="checkPw()" style="width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
       כניסה
@@ -1188,8 +1187,7 @@
     <div style="font-size:22px;font-weight:800;color:#111110;margin-bottom:1.5rem;letter-spacing:-.03em;">כניסה למערכת</div>
     <input type="password" id="pwInput" placeholder="סיסמת מנהל"
       onkeydown="if(event.key==='Enter')checkPw()"
-      style="width:100%;padding:10px 14px;font-size:15px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;text-align:center;margin-bottom:10px;background:#fff;color:#1a1a18;"
-      onkeydown="if(event.key==='Enter')checkPw()" />
+      style="width:100%;padding:10px 14px;font-size:15px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;text-align:center;margin-bottom:10px;background:#fff;color:#1a1a18;" />
     <div id="pwError" style="font-size:12px;color:#E24B4A;margin-bottom:10px;min-height:16px;"></div>
     <button id="pw_btn" onclick="checkPw()" style="width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
       כניסה
@@ -2009,7 +2007,6 @@ var isAuthed = window.isAuthed;
 var checkPw = window.checkPw;
 
 function requireAuth(tab) {
-  if (tab === 'contest') { loadContest(); }
   if (tab === 'tv') { doSwitchTab('tv'); return; }
   if (isAuthed()) { doSwitchTab(tab); return; }
   sessionStorage.setItem('pending_tab', tab);
@@ -2151,9 +2148,6 @@ function calcAll() {
   document.getElementById('s_total').textContent = sTotal || '—';
   document.getElementById('s_cph').textContent   = avgCph;
   document.getElementById('s_cph_note').textContent = cphCnt > 0 ? 'ממוצע' : '';
-
-  // ── SAVE IMMEDIATELY ──
-  saveTodayInputs();
 
   // ── SALE SOUND + ANIMATION ──
   const prevTotal = window._prevTotal || 0;
@@ -2476,9 +2470,12 @@ async function deleteAgent(id) {
   renderTable();
   refreshAgentSelect();
 }
-document.getElementById('mName').addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveModal();
-  if (e.key === 'Escape') closeModal();
+// Use event delegation for modal input - works even before element is visible
+document.addEventListener('keydown', e => {
+  if (e.target && e.target.id === 'mName') {
+    if (e.key === 'Enter') { e.preventDefault(); saveModal(); }
+    if (e.key === 'Escape') closeModal();
+  }
 });
 document.getElementById('modalOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
@@ -2493,6 +2490,20 @@ async function saveToday() {
   const today = new Date().toISOString().slice(0,10);
   const goal = parseInt(document.getElementById('goalInput').value)||0;
   const dailyLeads = parseInt(document.getElementById('dailyLeads').value)||0;
+  // Check if there's actual data to save
+  const hasRealData = agents.some(a =>
+    (parseInt(document.getElementById('calls_'+a.id)?.value)||0) > 0 ||
+    (parseInt(document.getElementById('leads_'+a.id)?.value)||0) > 0 ||
+    (parseInt(document.getElementById('renew_'+a.id)?.value)||0) > 0 ||
+    (parseInt(document.getElementById('hmo_'+a.id)?.value)||0) > 0 ||
+    (parseFloat(document.getElementById('hours_'+a.id)?.value)||0) > 0
+  );
+  if (!hasRealData) {
+    status.textContent = '⚠️ אין נתונים להזין — הזן נתונים תחילה';
+    status.style.color = 'var(--amber-tx)';
+    btn.disabled = false; btn.textContent = 'שמור נתוני יום';
+    return;
+  }
 
   try {
     // delete today's existing rows first
@@ -2525,6 +2536,31 @@ async function saveToday() {
   btn.disabled = false; btn.textContent = 'שמור נתוני יום';
 }
 
+
+/* ── FORCED SAVE (bypasses zero check, used for scheduled 18:00 save) ── */
+async function saveTodayForced() {
+  const today = new Date().toISOString().slice(0,10);
+  const dailyLeads = parseInt(document.getElementById('dailyLeads')?.value)||0;
+  try {
+    await supaFetch('daily_stats?date=eq.'+today, {method:'DELETE'});
+    const rows = agents.map(a => ({
+      date: today, agent_name: a.name,
+      calls:    parseInt(document.getElementById('calls_'+a.id)?.value)||0,
+      hours:    parseFloat(document.getElementById('hours_'+a.id)?.value)||0,
+      leads:    parseInt(document.getElementById('leads_'+a.id)?.value)||0,
+      renewals: parseInt(document.getElementById('renew_'+a.id)?.value)||0,
+      hmo:      parseInt(document.getElementById('hmo_'+a.id)?.value)||0,
+      total_sales:(parseInt(document.getElementById('leads_'+a.id)?.value)||0)+
+                  (parseInt(document.getElementById('renew_'+a.id)?.value)||0)+
+                  (parseInt(document.getElementById('hmo_'+a.id)?.value)||0),
+      daily_leads: dailyLeads
+    }));
+    await supaFetch('daily_stats', {method:'POST', body:JSON.stringify(rows), prefer:'return=minimal'});
+    console.log('✅ Scheduled save at 18:00 complete');
+    showSaveToast(new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}));
+  } catch(e) { console.warn('Forced save error:', e.message); }
+}
+
 /* ── AUTO-SAVE AT 18:00 + EVERY HOUR ── */
 function scheduleAutoSave() {
   const now = new Date();
@@ -2532,12 +2568,18 @@ function scheduleAutoSave() {
   target.setHours(18,0,0,0);
   if (now >= target) target.setDate(target.getDate()+1);
   const ms = target - now;
-  setTimeout(() => { saveToday(); scheduleAutoSave(); }, ms);
+  setTimeout(() => { saveTodayForced(); scheduleAutoSave(); }, ms);
 }
 scheduleAutoSave();
-// Also save every hour automatically
+// Also save every hour automatically (only if there's real data)
 setInterval(() => {
-  if (agents.length > 0) saveToday();
+  const hasAny = agents.some(a =>
+    (parseInt(document.getElementById('calls_'+a.id)?.value)||0) > 0 ||
+    (parseInt(document.getElementById('leads_'+a.id)?.value)||0) > 0 ||
+    (parseInt(document.getElementById('renew_'+a.id)?.value)||0) > 0 ||
+    (parseInt(document.getElementById('hmo_'+a.id)?.value)||0) > 0
+  );
+  if (agents.length > 0 && hasAny) saveToday();
 }, 3600000);
 
 /* ── POPULATE AGENT SELECT ── */
@@ -3691,6 +3733,15 @@ function debouncedSupaSave() {
   _supaDebounce = setTimeout(async () => { // 500ms debounce
     console.log('💾 AutoSave check - pauseAutosave:', _pauseAutosave, 'agents:', agents.length);
     if (_pauseAutosave) return;
+    // Don't save if all values are zero (page just loaded)
+    const hasData = agents.some(a => {
+      return (parseInt(document.getElementById('calls_'+a.id)?.value)||0) > 0 ||
+             (parseInt(document.getElementById('leads_'+a.id)?.value)||0) > 0 ||
+             (parseInt(document.getElementById('renew_'+a.id)?.value)||0) > 0 ||
+             (parseInt(document.getElementById('hmo_'+a.id)?.value)||0) > 0 ||
+             (parseFloat(document.getElementById('hours_'+a.id)?.value)||0) > 0;
+    });
+    if (!hasData) return;
     try {
       const today = new Date().toISOString().slice(0,10);
       const dailyLeads = parseInt(document.getElementById('dailyLeads').value)||0;
