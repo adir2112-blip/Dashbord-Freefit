@@ -2547,6 +2547,42 @@ async function saveTodayForced() {
   } catch(e) { console.warn('Forced save error:', e.message); }
 }
 
+
+/* ── MIDNIGHT RESET ── */
+function scheduleMidnightReset() {
+  const now = new Date();
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 5); // 00:00:05
+  const ms = midnight - now;
+  setTimeout(async () => {
+    // 1. Save yesterday's data to Supabase before reset
+    await saveTodayForced();
+    // 2. Clear all input fields
+    agents.forEach(a => {
+      ['calls','hours','leads','renew','hmo'].forEach(f => {
+        const el = document.getElementById(f+'_'+a.id);
+        if (el) el.value = '';
+      });
+      const goalEl = document.getElementById('goal_'+a.id);
+      // keep personal goal, reset status
+      const statusEl = document.getElementById('status_'+a.id);
+      if (statusEl) statusEl.value = 'active';
+    });
+    const dlEl = document.getElementById('dailyLeads');
+    if (dlEl) dlEl.value = '';
+    // 3. Remove yesterday's localStorage
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate()-1);
+    localStorage.removeItem('freefit_today_'+yesterday.toISOString().slice(0,10));
+    // 4. Reset prevTotal so sale sound doesn't fire
+    window._prevTotal = 0;
+    calcAll();
+    console.log('🌙 Midnight reset complete — new day started');
+    // 5. Schedule next midnight
+    scheduleMidnightReset();
+  }, ms);
+  console.log('⏰ Midnight reset scheduled in', Math.round(ms/60000), 'minutes');
+}
+
 /* ── AUTO-SAVE AT 18:00 + EVERY HOUR ── */
 function scheduleAutoSave() {
   const now = new Date();
@@ -2734,11 +2770,18 @@ async function loadStats() {
     document.getElementById('st_kpi_close').textContent     = closeRate;
     document.getElementById('st_kpi_close_sub').textContent = isAvg ? 'ממוצע תקופה' : sumLeads+' מתוך '+sumDailyL;
 
-    // Trend chart — exclude days where agent didn't work (all zeros)
-    const workRows = rows.filter(r => r.total_sales > 0 || r.calls > 0 || r.hours > 0);
-    const labels  = workRows.map(r => r.date.slice(5).replace('-','/'));
-    const salesData = workRows.map(r => r.total_sales);
-    const avgVal  = workRows.length > 0 ? workRows.reduce((s,r)=>s+r.total_sales,0)/workRows.length : 0;
+    // Trend chart — exclude Fri(5)/Sat(6) AND days where agent didn't work (all zeros)
+    const workRows = rows.filter(r => {
+      const dow = new Date(r.date).getDay();
+      if (dow === 5 || dow === 6) return false; // skip Fri & Sat — never show in chart
+      return true; // show all weekdays (zero days shown as "לא עבד" in table only)
+    });
+    const labels    = workRows.map(r => r.date.slice(5).replace('-','/'));
+    const salesData = workRows.map(r =>
+      (r.total_sales > 0 || r.calls > 0 || r.hours > 0) ? r.total_sales : null
+    );
+    const realWorkRows = workRows.filter(r => r.total_sales > 0 || r.calls > 0 || r.hours > 0);
+    const avgVal  = realWorkRows.length > 0 ? realWorkRows.reduce((s,r)=>s+r.total_sales,0)/realWorkRows.length : 0;
     const avgLine = workRows.map(() => parseFloat(avgVal.toFixed(1)));
     const isDk = matchMedia('(prefers-color-scheme:dark)').matches;
     const gc = isDk ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)';
@@ -2749,7 +2792,7 @@ async function loadStats() {
       type: 'line',
       data: { labels, datasets: [
         { label:'מכירות', data:salesData, borderColor:'#185FA5', backgroundColor:'rgba(24,95,165,.08)',
-          fill:true, tension:.35, pointRadius:5, pointBackgroundColor:'#185FA5', borderWidth:2.5, pointStyle:'circle' },
+          fill:true, tension:.35, pointRadius:5, pointBackgroundColor:'#185FA5', borderWidth:2.5, pointStyle:'circle', spanGaps:false },
         { label:'ממוצע', data:[], borderColor:'transparent', pointRadius:0, borderWidth:0 }
       ]},
       options: { responsive:true, maintainAspectRatio:false,
@@ -3981,6 +4024,8 @@ loadYesterdayDelta();
 setTimeout(()=>doSwitchTab('tv'),100);
 // Real-time sync starts via setInterval in syncFromSupabase block above
 setTimeout(syncFromSupabase, 3000);
+// Schedule automatic midnight reset
+scheduleMidnightReset();
 
 // Force save when page is closed/refreshed
 window.addEventListener('beforeunload', () => {
