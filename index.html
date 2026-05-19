@@ -2178,6 +2178,7 @@ function calcAll() {
     const leads=gv(a.id,'leads'), renew=gv(a.id,'renew'), hmo=gv(a.id,'hmo');
     sCalls+=calls; sHours+=hours; sLeads+=leads; sRenew+=renew; sHmo+=hmo;
     if (hours > 0) { cphSum += calls/hours; cphCnt++; }
+    checkMilestone(a.name, leads + renew + hmo);
   });
   const sTotal = sLeads + sRenew + sHmo;
   const avgCph = cphCnt > 0 ? (cphSum/cphCnt).toFixed(1) : '—';
@@ -2231,6 +2232,7 @@ function updateDashboard() {
     const leads=gv(a.id,'leads'), renew=gv(a.id,'renew'), hmo=gv(a.id,'hmo');
     sCalls+=calls; sHours+=hours; sLeads+=leads; sRenew+=renew; sHmo+=hmo;
     if (hours > 0) { cphSum += calls/hours; cphCnt++; }
+    checkMilestone(a.name, leads + renew + hmo);
   });
   const sTotal = sLeads + sRenew + sHmo;
   const goal   = parseInt(document.getElementById('goalInput').value) || 30;
