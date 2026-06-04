@@ -2621,7 +2621,16 @@ function scheduleMidnightReset() {
   setTimeout(async () => {
     // 1. Save yesterday's data to Supabase before reset
     await saveTodayForced();
-    // 2. Clear all input fields
+    // 2. Delete TODAY's rows from Supabase (prepare for new day)
+    try {
+      const todayStr = (function() {
+        const d = new Date();
+        return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      })();
+      await supaFetch('daily_stats?date=eq.'+todayStr, {method:'DELETE'});
+      console.log('[FreeFit] Midnight: Supabase cleared for new day ✓');
+    } catch(e) { console.warn('Midnight Supabase clear error:', e); }
+    // 3. Clear all input fields
     agents.forEach(a => {
       ['calls','hours','leads','renew','hmo'].forEach(f => {
         const el = document.getElementById(f+'_'+a.id);
