@@ -384,24 +384,6 @@
 </head>
 <body>
 
-<!-- PASSWORD SCREEN -->
-<div id="lockScreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#f0efe9 0%,#e8e7e0 100%);display:none;align-items:center;justify-content:center;z-index:9999;direction:rtl;">
-  <div style="background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:20px;padding:2.75rem 2.25rem;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.12),0 4px 16px rgba(0,0,0,.06);">
-    <div style="width:48px;height:48px;background:#185FA5;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    </div>
-    <div style="font-size:11px;font-weight:600;color:#a5a49e;letter-spacing:.08em;margin-bottom:4px;">פריפיט מכירות</div>
-    <div style="font-size:22px;font-weight:800;color:#111110;margin-bottom:1.5rem;letter-spacing:-.03em;">כניסה למערכת</div>
-    <input type="password" id="pwInput" placeholder="סיסמת מנהל"
-      onkeydown="if(event.key==='Enter')checkPw()"
-      style="width:100%;padding:10px 14px;font-size:15px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;text-align:center;margin-bottom:10px;background:#fff;color:#1a1a18;" />
-    <div id="pwError" style="font-size:12px;color:#E24B4A;margin-bottom:10px;min-height:16px;"></div>
-    <button id="pw_btn" onclick="checkPw()" style="width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
-      כניסה
-    </button>
-  </div>
-</div>
-
 <nav class="app-nav">
   <div class="nav-brand">
     <div class="nav-logo">
@@ -1245,8 +1227,21 @@
       <button class="btn btn-primary" onclick="saveModal()">שמור</button>
     </div>
   </div>
+</div>
 
-
+<!-- ADMIN PASSWORD GATE — for editing actions only (name/delete/target productivity) -->
+<div class="modal-overlay" id="pwGateOverlay">
+  <div class="modal-box" style="width:300px;">
+    <h3>אימות מנהל</h3>
+    <label>סיסמת מנהל</label>
+    <input type="password" id="pwGateInput" placeholder="הזן סיסמה" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);" />
+    <div id="pwGateError" style="font-size:12px;color:#E24B4A;min-height:16px;margin-top:6px;"></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closePwGate()">ביטול</button>
+      <button class="btn btn-primary" onclick="confirmPwGate()">אישור</button>
+    </div>
+  </div>
+</div>
 
 
 <script>
@@ -1254,36 +1249,56 @@
 if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 if (typeof ChartAnnotation !== 'undefined') Chart.register(ChartAnnotation);
 
-/* ── PASSWORD — defined FIRST so button works even if rest of script fails ── */
-window.CORRECT_PW = 'Q1w2e3r4!';
-window.isAuthed = function() { try { const s=localStorage.getItem('freefit_auth')||sessionStorage.getItem('freefit_auth'); return s && atob(s)===window.CORRECT_PW; } catch(e){return false;} };
-window.checkPw = function() {
-  const val = document.getElementById('pwInput').value;
-  if (val === window.CORRECT_PW) {
-    try { localStorage.setItem('freefit_auth', btoa(window.CORRECT_PW)); sessionStorage.setItem('freefit_auth', btoa(window.CORRECT_PW)); } catch(e){}
-    document.getElementById('lockScreen').style.display = 'none';
-    const pending = sessionStorage.getItem('pending_tab') || 'tv';
-    sessionStorage.removeItem('pending_tab');
-    if (typeof doSwitchTab === 'function') doSwitchTab(pending);
+/* ── AUTH DISABLED — כל הלשוניות פתוחות ללא סיסמה ── */
+function requireAuth(tab) { doSwitchTab(tab); }
+
+/* ── ADMIN GATE — סיסמה נדרשת רק לפעולות עריכה: הוספה/שינוי שם/מחיקת נציג, שינוי יעד פיריון ── */
+const ADMIN_PW = 'Q1w2e3r4!';
+let _pwGateCallback = null;
+
+function isAdminAuthed() {
+  try { return localStorage.getItem('freefit_admin_ok') === '1'; } catch(e) { return false; }
+}
+
+function requireAdminAction(callback) {
+  if (isAdminAuthed()) { callback(); return; }
+  _pwGateCallback = callback;
+  const inp = document.getElementById('pwGateInput');
+  const err = document.getElementById('pwGateError');
+  if (inp) inp.value = '';
+  if (err) err.textContent = '';
+  document.getElementById('pwGateOverlay').classList.add('open');
+  setTimeout(() => { if (inp) inp.focus(); }, 50);
+}
+
+function closePwGate() {
+  document.getElementById('pwGateOverlay').classList.remove('open');
+  _pwGateCallback = null;
+}
+
+function confirmPwGate() {
+  const val = document.getElementById('pwGateInput').value;
+  if (val === ADMIN_PW) {
+    try { localStorage.setItem('freefit_admin_ok', '1'); } catch(e) {}
+    const cb = _pwGateCallback;
+    closePwGate();
+    if (cb) cb();
   } else {
-    const errEl = document.getElementById('pwError');
-    if (errEl) errEl.textContent = 'סיסמה שגויה, נסה שוב';
-    const inp = document.getElementById('pwInput');
+    const err = document.getElementById('pwGateError');
+    if (err) err.textContent = 'סיסמה שגויה, נסה שוב';
+    const inp = document.getElementById('pwGateInput');
     if (inp) { inp.value = ''; inp.focus(); }
   }
-};
-var CORRECT_PW = window.CORRECT_PW;
-var isAuthed = window.isAuthed;
-var checkPw = window.checkPw;
-
-function requireAuth(tab) {
-  if (tab === 'tv') { doSwitchTab('tv'); return; }
-  if (window.isAuthed()) { doSwitchTab(tab); return; }
-  sessionStorage.setItem('pending_tab', tab);
-  document.getElementById('lockScreen').style.display = 'flex';
-  setTimeout(() => { const pi=document.getElementById('pwInput'); if(pi){pi.value='';pi.focus();} }, 80);
-  document.getElementById('pwError').textContent = '';
 }
+document.addEventListener('keydown', e => {
+  if (e.target && e.target.id === 'pwGateInput') {
+    if (e.key === 'Enter') { e.preventDefault(); confirmPwGate(); }
+    if (e.key === 'Escape') closePwGate();
+  }
+});
+document.getElementById('pwGateOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('pwGateOverlay')) closePwGate();
+});
 
 function doSwitchTab(tab) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1323,12 +1338,6 @@ function doSwitchTab(tab) {
     }
   }
 }
-
-// On load: start on TV (no auth needed) — hide lockscreen
-(function() {
-  const ls = document.getElementById('lockScreen');
-  if (ls) ls.style.display = 'none';
-})();
 
 /* ── SUPABASE CONFIG ── */
 const SUPA_URL = 'https://fmejfxejsrmjvexfizgj.supabase.co';
@@ -1703,19 +1712,23 @@ function renderTable() {
 
 /* ── MODAL ── */
 function openAdd() {
-  editingId = null;
-  document.getElementById('modalTitle').textContent = 'הוספת נציג';
-  document.getElementById('mName').value = '';
-  document.getElementById('modalOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('mName').focus(), 50);
+  requireAdminAction(() => {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'הוספת נציג';
+    document.getElementById('mName').value = '';
+    document.getElementById('modalOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('mName').focus(), 50);
+  });
 }
 function openEdit(id) {
-  editingId = id;
-  const a = agents.find(x => x.id === id);
-  document.getElementById('modalTitle').textContent = 'עריכת שם נציג';
-  document.getElementById('mName').value = a.name;
-  document.getElementById('modalOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('mName').focus(), 50);
+  requireAdminAction(() => {
+    editingId = id;
+    const a = agents.find(x => x.id === id);
+    document.getElementById('modalTitle').textContent = 'עריכת שם נציג';
+    document.getElementById('mName').value = a.name;
+    document.getElementById('modalOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('mName').focus(), 50);
+  });
 }
 function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
 async function saveModal() {
@@ -1737,15 +1750,17 @@ async function saveModal() {
   refreshAgentSelect();
   if (document.getElementById('page-cumulative').classList.contains('active')) renderCumulative();
 }
-async function deleteAgent(id) {
-  if (agents.length <= 1) return;
-  try {
-    await supaFetch('agents?id=eq.'+id, {method:'DELETE', prefer:'return=minimal'});
-  } catch(e) { console.error('deleteAgent error', e); }
-  agents = agents.filter(a => a.id !== id);
-  renderTable();
-  refreshAgentSelect();
-  if (document.getElementById('page-cumulative').classList.contains('active')) renderCumulative();
+function deleteAgent(id) {
+  requireAdminAction(async () => {
+    if (agents.length <= 1) return;
+    try {
+      await supaFetch('agents?id=eq.'+id, {method:'DELETE', prefer:'return=minimal'});
+    } catch(e) { console.error('deleteAgent error', e); }
+    agents = agents.filter(a => a.id !== id);
+    renderTable();
+    refreshAgentSelect();
+    if (document.getElementById('page-cumulative').classList.contains('active')) renderCumulative();
+  });
 }
 // Use event delegation for modal input - works even before element is visible
 document.addEventListener('keydown', e => {
@@ -2815,20 +2830,22 @@ async function saveCumOverride(agentId) {
   } catch(e) { console.error('saveCumOverride error', e); }
 }
 
-async function saveTargetProductivity() {
-  const val = parseFloat(document.getElementById('target_productivity_input').value);
-  if (isNaN(val) || val < 0) return;
-  localStorage.setItem('freefit_target_productivity', val);
-  try {
-    await supaFetch('settings?on_conflict=key', {
-      method: 'POST',
-      body: JSON.stringify({key: 'target_productivity', value: String(val)}),
-      prefer: 'resolution=merge-duplicates,return=minimal'
-    });
-  } catch(e) { console.error('saveTargetProductivity sync error', e); }
-  const ind = document.getElementById('target_productivity_saved');
-  if (ind) { ind.textContent = '✓ נשמר לכולם'; ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
-  renderCumulative();
+function saveTargetProductivity() {
+  requireAdminAction(async () => {
+    const val = parseFloat(document.getElementById('target_productivity_input').value);
+    if (isNaN(val) || val < 0) return;
+    localStorage.setItem('freefit_target_productivity', val);
+    try {
+      await supaFetch('settings?on_conflict=key', {
+        method: 'POST',
+        body: JSON.stringify({key: 'target_productivity', value: String(val)}),
+        prefer: 'resolution=merge-duplicates,return=minimal'
+      });
+    } catch(e) { console.error('saveTargetProductivity sync error', e); }
+    const ind = document.getElementById('target_productivity_saved');
+    if (ind) { ind.textContent = '✓ נשמר לכולם'; ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
+    renderCumulative();
+  });
 }
 
 
