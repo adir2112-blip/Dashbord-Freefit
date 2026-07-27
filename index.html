@@ -983,10 +983,10 @@
           <th>מכירות (חודשי)</th>
           <th>שעות (חודשי)</th>
           <th>פיריון</th>
-          <th style="background:var(--amber-bg);color:var(--amber-tx);font-size:11.5px;border-bottom:2px solid var(--amber);">🎯 צפי בונוס לסוף החודש</th>
           <th>יעד פיריון</th>
           <th>אחוז עמידה</th>
           <th>בונוס עד כה</th>
+          <th style="background:var(--amber-bg);color:var(--amber-tx);font-size:11.5px;border-bottom:2px solid var(--amber);">🎯 צפי בונוס לסוף החודש</th>
           <th style="width:62px">פעולות</th>
         </tr>
       </thead>
@@ -2762,13 +2762,13 @@ async function renderCumulative() {
       <td><input class="num-input" type="number" min="0" id="cum_sales_${a.id}" value="${salesVal}" oninput="onCumInput(${a.id})" /></td>
       <td><input class="num-input" type="number" min="0" step="0.5" id="cum_hours_${a.id}" value="${hoursVal}" oninput="onCumInput(${a.id})" /></td>
       <td style="text-align:left;font-weight:700;font-size:14px;" id="cum_prod_${a.id}"></td>
+      <td style="color:var(--text3);" id="cum_target_${a.id}"></td>
+      <td id="cum_pct_${a.id}"></td>
+      <td id="cum_bonus_${a.id}">—</td>
       <td class="cum-forecast-cell">
         <div class="cum-forecast-num" id="cum_forecast_${a.id}"></div>
         <div class="cum-forecast-sub" id="cum_forecast_sub_${a.id}"></div>
       </td>
-      <td style="color:var(--text3);" id="cum_target_${a.id}"></td>
-      <td id="cum_pct_${a.id}"></td>
-      <td id="cum_bonus_${a.id}">—</td>
       <td><div class="actions">
         <button class="btn-icon" title="עריכה" onclick="openEdit(${a.id})">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z"/></svg>
