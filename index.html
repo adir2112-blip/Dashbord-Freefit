@@ -971,6 +971,9 @@
     <span id="target_productivity_saved" style="font-size:11px;color:var(--green-tx);opacity:0;transition:opacity .3s;"></span>
     <button class="btn btn-primary" onclick="openAdd()">+ הוסף נציג</button>
     <span style="font-size:12px;color:var(--blue-tx);opacity:.75;">הוספה / מחיקה / שינוי שם — דרך כפתורי הטבלה למטה</span>
+    <div style="margin-right:auto;font-size:13px;color:var(--text2);">
+      ימי עבודה שעברו: <strong id="cum_work_days">0</strong> מתוך <strong id="cum_total_days">0</strong>
+    </div>
   </div>
 
   <div class="section-label">ביצועי נציגים — פיריון חודשי</div>
@@ -985,6 +988,7 @@
           <th>יעד פיריון</th>
           <th>אחוז פיריון חודשי</th>
           <th>סה"כ בונוס</th>
+          <th>צפי בונוס לסוף החודש</th>
           <th style="width:62px">פעולות</th>
         </tr>
       </thead>
@@ -2655,6 +2659,8 @@ function saveMonthlyGoal() {
 /* ── CUMULATIVE TARGET (PRODUCTIVITY) ── */
 let cumSettingsMap = {};
 let _cumSaveDebounce = {};
+let cumWorkDaysElapsed = 0;
+let cumWorkDaysTotal = 0;
 
 function cumMonthKey() {
   const now = new Date();
@@ -2668,6 +2674,16 @@ async function renderCumulative() {
   const monthEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0);
   const mKey = cumMonthKey();
   document.getElementById('cum_month_label').textContent = now.toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+
+  // ימי עבודה בחודש (ללא שישי/שבת) — אותה שיטה כמו בלשונית "יעדים חודשיים"
+  cumWorkDaysElapsed = 0; cumWorkDaysTotal = 0;
+  for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate()+1)) {
+    const dow = d.getDay(); if (dow === 5 || dow === 6) continue;
+    cumWorkDaysTotal++;
+    if (d <= now) cumWorkDaysElapsed++;
+  }
+  document.getElementById('cum_work_days').textContent = cumWorkDaysElapsed;
+  document.getElementById('cum_total_days').textContent = cumWorkDaysTotal;
 
   cumSettingsMap = {};
   try {
@@ -2705,6 +2721,7 @@ async function renderCumulative() {
       <td style="color:var(--text3);" id="cum_target_${a.id}"></td>
       <td style="text-align:left;font-weight:700;" id="cum_pct_${a.id}"></td>
       <td style="text-align:left;font-weight:700;color:var(--text3);" id="cum_bonus_${a.id}">—</td>
+      <td style="text-align:left;font-weight:700;color:var(--text3);" id="cum_forecast_${a.id}">—</td>
       <td><div class="actions">
         <button class="btn-icon" title="עריכה" onclick="openEdit(${a.id})">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z"/></svg>
@@ -2747,6 +2764,14 @@ function updateCumRow(agentId) {
   const bonusRate  = cumBonusRate(pctRaw);
   const bonusTotal = bonusRate * sales;
 
+  // צפי לסוף החודש — הקצב (פיריון, ולכן גם % עמידה וגם עמלה למכירה) נשאר קבוע,
+  // רק כמות המכירות מוקרנת קדימה לפי היחס בין ימי העבודה שעברו לסה"כ ימי העבודה בחודש
+  let forecastBonus = null, forecastSales = null;
+  if (hasHours && cumWorkDaysElapsed > 0) {
+    forecastSales = sales * (cumWorkDaysTotal / cumWorkDaysElapsed);
+    forecastBonus = bonusRate * forecastSales;
+  }
+
   const prodEl = document.getElementById('cum_prod_'+agentId);
   if (prodEl) { prodEl.textContent = hasHours ? prod.toFixed(2) : '—'; prodEl.style.color = prodColor; }
   const targetEl = document.getElementById('cum_target_'+agentId);
@@ -2758,6 +2783,13 @@ function updateCumRow(agentId) {
     bonusEl.textContent = pctRaw === null ? '—' : '₪'+bonusTotal.toLocaleString('he-IL');
     bonusEl.title = pctRaw === null ? '' : ('עמלה למכירה: ₪'+bonusRate+' × '+sales+' מכירות');
     bonusEl.style.color = bonusTotal > 0 ? 'var(--green-tx)' : 'var(--text3)';
+  }
+  const forecastEl = document.getElementById('cum_forecast_'+agentId);
+  if (forecastEl) {
+    forecastEl.textContent = forecastBonus === null ? '—' : '₪'+Math.round(forecastBonus).toLocaleString('he-IL');
+    forecastEl.title = forecastBonus === null ? '' :
+      ('צפי מכירות לסוף החודש: '+forecastSales.toFixed(1)+' (קצב נוכחי) · עמלה למכירה: ₪'+bonusRate);
+    forecastEl.style.color = forecastBonus > 0 ? 'var(--blue-tx)' : 'var(--text3)';
   }
 }
 
