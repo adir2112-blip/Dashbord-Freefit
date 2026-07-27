@@ -983,6 +983,8 @@
           <th>כמות שעות חודשית</th>
           <th>פיריון</th>
           <th>יעד פיריון</th>
+          <th>אחוז פיריון חודשי</th>
+          <th>סה"כ בונוס</th>
           <th style="width:62px">פעולות</th>
         </tr>
       </thead>
@@ -2651,28 +2653,32 @@ function saveMonthlyGoal() {
 
 
 /* ── CUMULATIVE TARGET (PRODUCTIVITY) ── */
-async function loadTargetProductivity() {
-  try {
-    const rows = await supaFetch('settings?key=eq.target_productivity&select=value');
-    if (rows && rows[0] && rows[0].value != null && rows[0].value !== '') {
-      const v = parseFloat(rows[0].value);
-      if (!isNaN(v)) { localStorage.setItem('freefit_target_productivity', v); return v; }
-    }
-  } catch(e) { console.error('loadTargetProductivity error', e); }
-  const local = localStorage.getItem('freefit_target_productivity');
-  const v = local != null ? parseFloat(local) : NaN;
-  return isNaN(v) ? 1 : v;
+let cumSettingsMap = {};
+let _cumSaveDebounce = {};
+
+function cumMonthKey() {
+  const now = new Date();
+  return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
 }
 
 async function renderCumulative() {
   const inp = document.getElementById('target_productivity_input');
-  inp.value = await loadTargetProductivity();
-  const targetProd = parseFloat(inp.value) || 0;
-
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const mKey = cumMonthKey();
   document.getElementById('cum_month_label').textContent = now.toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+
+  cumSettingsMap = {};
+  try {
+    const settingsRows = await supaFetch('settings') || [];
+    settingsRows.forEach(r => cumSettingsMap[r.key] = r.value);
+  } catch(e) { console.error('settings load error', e); }
+
+  const targetProd = cumSettingsMap['target_productivity'] != null
+    ? parseFloat(cumSettingsMap['target_productivity'])
+    : (parseFloat(localStorage.getItem('freefit_target_productivity')) || 1);
+  inp.value = isNaN(targetProd) ? 1 : targetProd;
 
   let rows = [];
   try {
@@ -2683,18 +2689,22 @@ async function renderCumulative() {
   tbody.innerHTML = '';
   agents.forEach(a => {
     const agentRows = rows.filter(r => r.agent_name === a.name);
-    const sumSales = agentRows.reduce((s,r)=>s+r.total_sales,0);
-    const sumHours = agentRows.reduce((s,r)=>s+r.hours,0);
-    const hasHours = sumHours > 0;
-    const prod = hasHours ? sumSales/sumHours : 0;
-    const prodColor = !hasHours ? 'var(--text3)' : (prod >= targetProd ? 'var(--green-tx)' : 'var(--red-tx)');
+    const autoSales = agentRows.reduce((s,r)=>s+r.total_sales,0);
+    const autoHours = agentRows.reduce((s,r)=>s+r.hours,0);
+    const salesKey = 'cum_sales_'+a.id+'_'+mKey;
+    const hoursKey = 'cum_hours_'+a.id+'_'+mKey;
+    const salesVal = cumSettingsMap[salesKey] != null && cumSettingsMap[salesKey] !== '' ? cumSettingsMap[salesKey] : autoSales;
+    const hoursVal = cumSettingsMap[hoursKey] != null && cumSettingsMap[hoursKey] !== '' ? cumSettingsMap[hoursKey] : autoHours;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${a.name}</td>
-      <td>${sumSales}</td>
-      <td>${sumHours}</td>
-      <td style="text-align:left;font-weight:700;color:${prodColor};">${hasHours ? prod.toFixed(2) : '—'}</td>
-      <td style="color:var(--text3);">${targetProd}</td>
+      <td><input class="num-input" type="number" min="0" id="cum_sales_${a.id}" value="${salesVal}" oninput="onCumInput(${a.id})" /></td>
+      <td><input class="num-input" type="number" min="0" step="0.5" id="cum_hours_${a.id}" value="${hoursVal}" oninput="onCumInput(${a.id})" /></td>
+      <td style="text-align:left;font-weight:700;" id="cum_prod_${a.id}"></td>
+      <td style="color:var(--text3);" id="cum_target_${a.id}"></td>
+      <td style="text-align:left;font-weight:700;" id="cum_pct_${a.id}"></td>
+      <td style="text-align:left;font-weight:700;color:var(--text3);" id="cum_bonus_${a.id}">—</td>
       <td><div class="actions">
         <button class="btn-icon" title="עריכה" onclick="openEdit(${a.id})">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z"/></svg>
@@ -2704,7 +2714,73 @@ async function renderCumulative() {
         </button>
       </div></td>`;
     tbody.appendChild(tr);
+    updateCumRow(a.id);
   });
+}
+
+/* מודל תמריצים — נספח ב' לחוזה, בתוקף מ-01.12.2021
+   עמלה למכירה לפי % עמידה ביעד (יעד = פיריון שהמנהל מגדיר) */
+function cumBonusRate(pctRaw) {
+  if (pctRaw === null) return 0;
+  if (pctRaw < 40)  return 0;
+  if (pctRaw < 60)  return 4;
+  if (pctRaw < 80)  return 5;
+  if (pctRaw < 100) return 6;
+  if (pctRaw < 108) return 7;
+  if (pctRaw < 120) return 8;
+  return 9;
+}
+
+function updateCumRow(agentId) {
+  const salesEl = document.getElementById('cum_sales_'+agentId);
+  const hoursEl = document.getElementById('cum_hours_'+agentId);
+  if (!salesEl || !hoursEl) return;
+  const sales = parseFloat(salesEl.value) || 0;
+  const hours = parseFloat(hoursEl.value) || 0;
+  const targetProd = parseFloat(document.getElementById('target_productivity_input').value) || 0;
+  const hasHours = hours > 0;
+  const prod = hasHours ? sales/hours : 0;
+  const prodColor = !hasHours ? 'var(--text3)' : (prod >= targetProd ? 'var(--green-tx)' : 'var(--red-tx)');
+  const pctRaw = (hasHours && targetProd > 0) ? (prod/targetProd)*100 : null;
+  const pct = pctRaw === null ? null : Math.round(pctRaw);
+  const pctColor = pct === null ? 'var(--text3)' : (pct >= 100 ? 'var(--green-tx)' : (pct >= 70 ? 'var(--blue-tx)' : 'var(--amber-tx)'));
+  const bonusRate  = cumBonusRate(pctRaw);
+  const bonusTotal = bonusRate * sales;
+
+  const prodEl = document.getElementById('cum_prod_'+agentId);
+  if (prodEl) { prodEl.textContent = hasHours ? prod.toFixed(2) : '—'; prodEl.style.color = prodColor; }
+  const targetEl = document.getElementById('cum_target_'+agentId);
+  if (targetEl) targetEl.textContent = targetProd;
+  const pctEl = document.getElementById('cum_pct_'+agentId);
+  if (pctEl) { pctEl.textContent = pct === null ? '—' : pct+'%'; pctEl.style.color = pctColor; }
+  const bonusEl = document.getElementById('cum_bonus_'+agentId);
+  if (bonusEl) {
+    bonusEl.textContent = pctRaw === null ? '—' : '₪'+bonusTotal.toLocaleString('he-IL');
+    bonusEl.title = pctRaw === null ? '' : ('עמלה למכירה: ₪'+bonusRate+' × '+sales+' מכירות');
+    bonusEl.style.color = bonusTotal > 0 ? 'var(--green-tx)' : 'var(--text3)';
+  }
+}
+
+function onCumInput(agentId) {
+  updateCumRow(agentId);
+  clearTimeout(_cumSaveDebounce[agentId]);
+  _cumSaveDebounce[agentId] = setTimeout(() => saveCumOverride(agentId), 700);
+}
+
+async function saveCumOverride(agentId) {
+  const mKey = cumMonthKey();
+  const sales = document.getElementById('cum_sales_'+agentId).value;
+  const hours = document.getElementById('cum_hours_'+agentId).value;
+  try {
+    await supaFetch('settings?on_conflict=key', {
+      method: 'POST',
+      body: JSON.stringify([
+        {key: 'cum_sales_'+agentId+'_'+mKey, value: String(sales)},
+        {key: 'cum_hours_'+agentId+'_'+mKey, value: String(hours)}
+      ]),
+      prefer: 'resolution=merge-duplicates,return=minimal'
+    });
+  } catch(e) { console.error('saveCumOverride error', e); }
 }
 
 async function saveTargetProductivity() {
