@@ -238,6 +238,22 @@
   .btn-icon:hover { background: var(--bg2); border-color: var(--border2); color: var(--text); }
   .btn-icon svg { width: 13px; height: 13px; }
 
+  /* ── CUMULATIVE TARGET TABLE ── */
+  .cum-table td, .cum-table th { padding: 14px 12px; }
+  .cum-table tbody tr td:first-child { padding-right: 16px; }
+  .cum-table .cum-avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .cum-table .cum-forecast-cell { background: var(--amber-bg); text-align: center; }
+  .cum-table .cum-forecast-num { font-size: 20px; font-weight: 800; line-height: 1.1; }
+  .cum-table .cum-forecast-sub { font-size: 10px; color: var(--amber-tx); opacity: .8; margin-top: 2px; }
+  .cum-table .cum-chip {
+    display: inline-flex; align-items: center; padding: 3px 11px;
+    border-radius: 8px; font-size: 13px; font-weight: 700;
+  }
+
   /* SUMMARY TABLE 2 */
   .sum2 { margin-top: 1.75rem; }
   .sum2 table { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
@@ -960,17 +976,17 @@
 
   <div class="section-label">ביצועי נציגים — פיריון חודשי</div>
   <div class="tbl-wrap">
-    <table>
+    <table class="cum-table">
       <thead>
         <tr>
-          <th style="width:140px">שם נציג</th>
-          <th>כמות מכירות חודשית</th>
-          <th>כמות שעות חודשית</th>
+          <th style="width:170px">שם נציג</th>
+          <th>מכירות (חודשי)</th>
+          <th>שעות (חודשי)</th>
           <th>פיריון</th>
+          <th style="background:var(--amber-bg);color:var(--amber-tx);font-size:11.5px;border-bottom:2px solid var(--amber);">🎯 צפי בונוס לסוף החודש</th>
           <th>יעד פיריון</th>
-          <th>אחוז פיריון חודשי</th>
-          <th>סה"כ בונוס</th>
-          <th>צפי בונוס לסוף החודש</th>
+          <th>אחוז עמידה</th>
+          <th>בונוס עד כה</th>
           <th style="width:62px">פעולות</th>
         </tr>
       </thead>
@@ -1947,7 +1963,14 @@ function refreshAgentSelect() {
 /* ── DELETE AGENT DATA ── */
 let _pauseAutosave = false;
 
-async function deleteAgentData() {
+function deleteAgentData() {
+  const agentName = document.getElementById('delete_agent_sel').value;
+  const statusEl  = document.getElementById('delete_status');
+  if (!agentName) { statusEl.textContent = 'בחר נציג תחילה'; return; }
+  requireAdminAction(() => deleteAgentDataConfirmed());
+}
+
+async function deleteAgentDataConfirmed() {
   const agentName = document.getElementById('delete_agent_sel').value;
   const range     = document.getElementById('delete_range_sel').value;
   const statusEl  = document.getElementById('delete_status');
@@ -2727,16 +2750,25 @@ async function renderCumulative() {
     const salesVal = cumSettingsMap[salesKey] != null && cumSettingsMap[salesKey] !== '' ? cumSettingsMap[salesKey] : autoSales;
     const hoursVal = cumSettingsMap[hoursKey] != null && cumSettingsMap[hoursKey] !== '' ? cumSettingsMap[hoursKey] : autoHours;
 
+    const avIdx = agents.findIndex(x=>x.id===a.id) % AVATARBG.length;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${a.name}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:9px;">
+          <div class="cum-avatar" style="background:${AVATARBG[avIdx]};color:${AVATARTX[avIdx]};">${initials(a.name)}</div>
+          <span style="font-weight:700;color:var(--text);">${a.name}</span>
+        </div>
+      </td>
       <td><input class="num-input" type="number" min="0" id="cum_sales_${a.id}" value="${salesVal}" oninput="onCumInput(${a.id})" /></td>
       <td><input class="num-input" type="number" min="0" step="0.5" id="cum_hours_${a.id}" value="${hoursVal}" oninput="onCumInput(${a.id})" /></td>
-      <td style="text-align:left;font-weight:700;" id="cum_prod_${a.id}"></td>
+      <td style="text-align:left;font-weight:700;font-size:14px;" id="cum_prod_${a.id}"></td>
+      <td class="cum-forecast-cell">
+        <div class="cum-forecast-num" id="cum_forecast_${a.id}"></div>
+        <div class="cum-forecast-sub" id="cum_forecast_sub_${a.id}"></div>
+      </td>
       <td style="color:var(--text3);" id="cum_target_${a.id}"></td>
-      <td style="text-align:left;font-weight:700;" id="cum_pct_${a.id}"></td>
-      <td style="text-align:left;font-weight:700;color:var(--text3);" id="cum_bonus_${a.id}">—</td>
-      <td style="text-align:left;font-weight:700;color:var(--text3);" id="cum_forecast_${a.id}">—</td>
+      <td id="cum_pct_${a.id}"></td>
+      <td id="cum_bonus_${a.id}">—</td>
       <td><div class="actions">
         <button class="btn-icon" title="עריכה" onclick="openEdit(${a.id})">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z"/></svg>
@@ -2791,20 +2823,35 @@ function updateCumRow(agentId) {
   if (prodEl) { prodEl.textContent = hasHours ? prod.toFixed(2) : '—'; prodEl.style.color = prodColor; }
   const targetEl = document.getElementById('cum_target_'+agentId);
   if (targetEl) targetEl.textContent = targetProd;
+
   const pctEl = document.getElementById('cum_pct_'+agentId);
-  if (pctEl) { pctEl.textContent = pct === null ? '—' : pct+'%'; pctEl.style.color = pctColor; }
+  if (pctEl) {
+    if (pct === null) { pctEl.innerHTML = '<span style="color:var(--text3);">—</span>'; }
+    else {
+      const pillCls = pct >= 100 ? 'pill-green' : (pct >= 70 ? 'pill-blue' : 'pill-amber');
+      pctEl.innerHTML = '<span class="pill '+pillCls+'">'+pct+'%</span>';
+    }
+  }
+
   const bonusEl = document.getElementById('cum_bonus_'+agentId);
   if (bonusEl) {
-    bonusEl.textContent = pctRaw === null ? '—' : '₪'+bonusTotal.toLocaleString('he-IL');
-    bonusEl.title = pctRaw === null ? '' : ('עמלה למכירה: ₪'+bonusRate+' × '+sales+' מכירות');
-    bonusEl.style.color = bonusTotal > 0 ? 'var(--green-tx)' : 'var(--text3)';
+    if (pctRaw === null) { bonusEl.innerHTML = '<span style="color:var(--text3);">—</span>'; bonusEl.title = ''; }
+    else {
+      bonusEl.innerHTML = '<span class="cum-chip" style="background:var(--green-bg);color:var(--green-tx);">₪'+bonusTotal.toLocaleString('he-IL')+'</span>';
+      bonusEl.title = 'עמלה למכירה: ₪'+bonusRate+' × '+sales+' מכירות';
+    }
   }
+
   const forecastEl = document.getElementById('cum_forecast_'+agentId);
+  const forecastSubEl = document.getElementById('cum_forecast_sub_'+agentId);
   if (forecastEl) {
+    forecastEl.style.color = 'var(--amber-tx)';
     forecastEl.textContent = forecastBonus === null ? '—' : '₪'+Math.round(forecastBonus).toLocaleString('he-IL');
     forecastEl.title = forecastBonus === null ? '' :
-      ('צפי מכירות לסוף החודש: '+forecastSales.toFixed(1)+' (קצב נוכחי) · עמלה למכירה: ₪'+bonusRate);
-    forecastEl.style.color = forecastBonus > 0 ? 'var(--blue-tx)' : 'var(--text3)';
+      ('צפי מכירות לסוף החודש: '+forecastSales.toFixed(1)+' · עמלה למכירה: ₪'+bonusRate);
+  }
+  if (forecastSubEl) {
+    forecastSubEl.textContent = forecastBonus === null ? 'אין עדיין נתונים החודש' : 'לפי הקצב הנוכחי';
   }
 }
 
