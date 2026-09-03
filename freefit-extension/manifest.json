@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FreeFit Seyata + 3CX Sync",
-  "version": "4.5",
+  "version": "4.6",
   "description": "\u05de\u05e1\u05e0\u05db\u05e8\u05df \u05de\u05db\u05d9\u05e8\u05d5\u05ea \u05de-Seyata \u05d5\u05e9\u05d9\u05d7\u05d5\u05ea \u05de-3CX \u05dc\u05d3\u05e9\u05d1\u05d5\u05e8\u05d3 FreeFit",
   "permissions": [
     "alarms",
