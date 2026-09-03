@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; width: 300px; padding: 14px; background: #f8f8f6; margin: 0; }
+  h2 { font-size: 14px; color: #185FA5; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .section { background: #fff; border: 1px solid #e0e0d8; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .section-title { font-size: 10px; font-weight: 700; color: #888; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 6px; }
+  .label { font-size: 10px; color: #888; margin-bottom: 2px; }
+  .value { font-size: 12px; font-weight: 600; color: #111; }
+  .value.green { color: #0F6245; }
+  .value.red { color: #A32D2D; }
+  .value.orange { color: #BA7517; }
+  button { width: 100%; padding: 8px; font-size: 13px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 6px; }
+  .btn-seyata { background: #0f3460; color: #fff; }
+  .btn-cx { background: #185FA5; color: #fff; }
+  .note { font-size: 10px; color: #aaa; text-align: center; margin-top: 6px; }
+</style>
+</head>
+<body>
+<h2>🏆 FreeFit Sync v2.0</h2>
+
+<div class="section">
+  <div class="section-title">📞 Seyata — מכירות</div>
+  <div class="label">סנכרון אחרון</div>
+  <div class="value green" id="lastSaleSync">טרם סונכרן</div>
+  <div class="label" style="margin-top:6px">מכירות</div>
+  <div class="value" id="lastSaleCount">—</div>
+  <div class="label" style="margin-top:4px">פירוט</div>
+  <div class="value" id="lastSaleAgents" style="font-size:10px;line-height:1.5">—</div>
+  <div class="value red" id="lastSaleError" style="font-size:10px;margin-top:4px;"></div>
+</div>
+
+<div class="section">
+  <div class="section-title">📱 3CX — שיחות</div>
+  <div class="label">סנכרון אחרון</div>
+  <div class="value green" id="lastCallSync">טרם סונכרן</div>
+  <div class="label" style="margin-top:4px">פירוט</div>
+  <div class="value" id="lastCallDetail" style="font-size:10px;line-height:1.5">—</div>
+  <div class="value red" id="lastCallError" style="font-size:10px;margin-top:4px;"></div>
+  <div class="value orange" id="cxTokenStatus" style="font-size:10px;margin-top:4px;"></div>
+</div>
+
+<button id="btnSeyata" class="btn-seyata">🔄 סנכרן מכירות (Seyata)</button>
+<button id="btnCX" class="btn-cx">📞 סנכרן שיחות (3CX)</button>
+<div class="note">סנכרון אוטומטי כל 10 דקות</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
