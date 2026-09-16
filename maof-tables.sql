@@ -22,3 +22,6 @@ create table if not exists maof_daily_stats (
 -- Matches the existing agents/daily_stats tables: RLS off, anon key does all CRUD.
 alter table maof_agents disable row level security;
 alter table maof_daily_stats disable row level security;
+
+-- calls = total calls (incoming+outgoing combined, since 3CX reports one
+-- combined number per extension for מעוף) — no separate incoming column needed.

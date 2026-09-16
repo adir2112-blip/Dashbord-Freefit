@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Maof Fireberry + 3CX Sync",
+  "version": "1.0",
+  "description": "מסנכרן מכירות מ-Fireberry ושיחות מ-3CX לדשבורד מעוף מכירות",
+  "permissions": [
+    "alarms",
+    "storage",
+    "tabs",
+    "scripting",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "https://api.fireberry.com/*",
+    "https://movement.3cx.eu/*",
+    "https://fmejfxejsrmjvexfizgj.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://movement.3cx.eu/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon.png"
+    }
+  },
+  "icons": {
+    "48": "icon.png"
+  }
+}
