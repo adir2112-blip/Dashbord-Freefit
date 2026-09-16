@@ -36,7 +36,7 @@ async function syncSalesFromBackground() {
       String(today.getDate()).padStart(2,'0');
     const todayStr = today.toISOString().slice(0, 10);
 
-    const res = await fetch(SEYATA_BASE + '/api/mn_Service_Requests?sr_StatusReason=2&sr_ResponseDate=' + dateStr + '&sr_change_date=' + dateStr + '&_limit=500');
+    const res = await fetch(SEYATA_BASE + '/api/mn_Service_Requests?sr_StatusReason=2&sr_ResponseDate=' + dateStr + '&sr_change_date=' + dateStr + '&_limit=500', { credentials: 'include' });
     if (!res.ok) throw new Error('Seyata error: ' + res.status);
     const data = await res.json();
     if (!Array.isArray(data)) throw new Error('Invalid response');
@@ -80,9 +80,11 @@ async function syncSalesFromBackground() {
     const detail = Object.entries(salesByAgent).map(([n,s])=>n.split(' ')[0]+':'+(s.leads+s.renewals)).join(' | ');
     await chrome.storage.local.set({ lastSaleSync: new Date().toLocaleTimeString('he-IL'), lastSaleCount: total, lastSaleAgents: detail, lastSaleError: '' });
     console.log('[FreeFit BG] ✅ Sales synced:', detail);
+    return true;
   } catch(e) {
     console.error('[FreeFit BG] Sales error:', e.message);
     await chrome.storage.local.set({ lastSaleError: e.message });
+    return false;
   }
 }
 
@@ -225,11 +227,15 @@ chrome.webRequest?.onBeforeSendHeaders?.addListener(
   ['requestHeaders']
 );
 
-function ensureAlarms() {
-  chrome.alarms.create('seyataSync',    { periodInMinutes: 10 });
-  chrome.alarms.create('cxSync',        { periodInMinutes: 10 });
-  chrome.alarms.create('cxReload',      { periodInMinutes: 60 });
-  chrome.alarms.create('midnightReset', { periodInMinutes: 1 });
+async function ensureAlarms() {
+  // Only create alarms that don't already exist — calling create() on an
+  // existing alarm resets its countdown, which can stall periodic sync
+  // indefinitely if the service worker wakes for unrelated reasons.
+  const wanted = { seyataSync: 10, cxSync: 10, cxReload: 60, midnightReset: 1 };
+  for (const [name, periodInMinutes] of Object.entries(wanted)) {
+    const existing = await chrome.alarms.get(name);
+    if (!existing) chrome.alarms.create(name, { periodInMinutes });
+  }
   console.log('[FreeFit] Alarms ensured ✓');
 }
 
@@ -241,7 +247,17 @@ ensureAlarms();
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'seyataSync') {
     // Runs directly from background — no open Seyata tab required
-    await syncSalesFromBackground();
+    const ok = await syncSalesFromBackground();
+    if (!ok) {
+      // Fallback: if a Seyata tab happens to be open, sync via content script
+      const tabs = await chrome.tabs.query({ url: 'https://syatacrm.co.il/*' });
+      if (tabs.length > 0) {
+        try {
+          await chrome.scripting.executeScript({ target: { tabId: tabs[0].id }, files: ['content.js'] });
+        } catch(e) {}
+        setTimeout(() => chrome.tabs.sendMessage(tabs[0].id, { action: 'sync' }, ()=>{}), 500);
+      }
+    }
   }
 
   if (alarm.name === 'cxSync') {
