@@ -471,6 +471,7 @@
           <th style="width:78px">שיחות / שעה</th>
           <th style="width:74px">מכירות</th>
           <th style="width:70px">סה"כ מכירות</th>
+          <th style="width:74px">פיריון שעתי</th>
           <th style="width:68px">יעד אישי</th>
           <th style="width:70px">סטטוס</th>
           <th style="width:62px">פעולות</th>
@@ -485,6 +486,7 @@
           <td><span id="s_cph">—</span><span class="avg-note" id="s_cph_note"></span></td>
           <td id="s_leads">—</td>
           <td id="s_total">—</td>
+          <td id="s_productivity">—</td>
           <td></td>
         </tr>
       </tfoot>
@@ -545,12 +547,9 @@
       <div class="card-hd">
         <div>
           <div class="card-title">השוואת ביצועים בין נציגים</div>
-          <div class="card-sub">מכירות לפי קטגוריה</div>
+          <div class="card-sub">מכירות לפי נציג</div>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
-          <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#185FA5;display:inline-block"></span>לידים</span>
-          <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#1D9E75;display:inline-block"></span>חידושים</span>
-          <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#7F77DD;display:inline-block"></span>ק"ח</span>
           <button onclick="downloadCardImage('db_bar_card','גרף-נציגים')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button>
         </div>
       </div>
@@ -562,7 +561,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">פילוח מכירות</div>
-          <div class="card-sub">לפי מקור</div>
+          <div class="card-sub">לפי נציג</div>
         </div>
         <button onclick="downloadCardImage('db_donut_card','פילוח-מכירות')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button>
       </div>
@@ -591,10 +590,8 @@
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;">סה"כ שיחות</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;">שעות עבודה</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;">שיחות / שעה</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#0C447C;border-bottom:1px solid var(--border);white-space:nowrap;">לידים</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#085041;border-bottom:1px solid var(--border);white-space:nowrap;">חידושים</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#3C3489;border-bottom:1px solid var(--border);white-space:nowrap;">ק"ח</th>
               <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);white-space:nowrap;">סה"כ מכירות</th>
+              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;">פיריון שעתי</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--amber-tx);border-bottom:1px solid var(--border);white-space:nowrap;">יעד אישי</th>
             </tr>
           </thead>
@@ -714,7 +711,7 @@
         <div class="kpi-sub">ממוצע תקופה</div>
       </div>
       <div class="kpi"><div class="kpi-accent" style="background:#BA7517"></div>
-        <div class="kpi-lbl">אחוז סגירה</div>
+        <div class="kpi-lbl">פיריון שעתי</div>
         <div class="kpi-num" id="st_kpi_close">—</div>
         <div class="kpi-sub" id="st_kpi_close_sub"></div>
       </div>
@@ -732,7 +729,7 @@
         <div style="position:relative;width:100%;height:220px;"><canvas id="st_trend_chart" role="img" aria-label="גרף מגמת מכירות לאורך זמן">נתוני מגמה</canvas></div>
       </div>
       <div class="card">
-        <div class="card-hd"><div class="card-title">פילוח מכירות</div><div class="card-sub">לפי מקור</div></div>
+        <div class="card-hd"><div class="card-title">ימי עבודה</div><div class="card-sub">עבד לעומת לא עבד</div></div>
         <div style="position:relative;width:100%;height:155px;"><canvas id="st_donut_chart" role="img" aria-label="פילוח מכירות לפי מקור">פילוח</canvas></div>
         <div id="st_donut_legend" style="display:flex;flex-direction:column;gap:6px;margin-top:.75rem;"></div>
       </div>
@@ -751,11 +748,8 @@
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);">שיחות</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);">שעות</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);">שיחות/שעה</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#0C447C;border-bottom:1px solid var(--border);">לידים</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#085041;border-bottom:1px solid var(--border);">חידושים</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#3C3489;border-bottom:1px solid var(--border);">ק"ח</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);">סה"כ</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--green-tx);border-bottom:1px solid var(--border);">% סגירה</th>
+              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);">סה"כ מכירות</th>
+              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);">פיריון שעתי</th>
             </tr>
           </thead>
           <tbody id="st_daily_table"></tbody>
@@ -1160,6 +1154,7 @@
           <th style="width:78px">שיחות / שעה</th>
           <th style="width:74px">מכירות</th>
           <th style="width:70px">סה"כ מכירות</th>
+          <th style="width:74px">פיריון שעתי</th>
           <th style="width:68px">יעד אישי</th>
           <th style="width:70px">סטטוס</th>
           <th style="width:62px">פעולות</th>
@@ -1174,6 +1169,7 @@
           <td><span id="s_cph">—</span><span class="avg-note" id="s_cph_note"></span></td>
           <td id="s_leads">—</td>
           <td id="s_total">—</td>
+          <td id="s_productivity">—</td>
           <td></td>
         </tr>
       </tfoot>
@@ -1234,12 +1230,9 @@
       <div class="card-hd">
         <div>
           <div class="card-title">השוואת ביצועים בין נציגים</div>
-          <div class="card-sub">מכירות לפי קטגוריה</div>
+          <div class="card-sub">מכירות לפי נציג</div>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
-          <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#185FA5;display:inline-block"></span>לידים</span>
-          <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#1D9E75;display:inline-block"></span>חידושים</span>
-          <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#7F77DD;display:inline-block"></span>ק"ח</span>
           <button onclick="downloadCardImage('db_bar_card','גרף-נציגים')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button>
         </div>
       </div>
@@ -1251,7 +1244,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">פילוח מכירות</div>
-          <div class="card-sub">לפי מקור</div>
+          <div class="card-sub">לפי נציג</div>
         </div>
         <button onclick="downloadCardImage('db_donut_card','פילוח-מכירות')" style="font-size:11px;padding:3px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;" title="הורד תמונה">&#8595; תמונה</button>
       </div>
@@ -1280,10 +1273,8 @@
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;">סה"כ שיחות</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;">שעות עבודה</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;">שיחות / שעה</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#0C447C;border-bottom:1px solid var(--border);white-space:nowrap;">לידים</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#085041;border-bottom:1px solid var(--border);white-space:nowrap;">חידושים</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#3C3489;border-bottom:1px solid var(--border);white-space:nowrap;">ק"ח</th>
               <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);white-space:nowrap;">סה"כ מכירות</th>
+              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;">פיריון שעתי</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--amber-tx);border-bottom:1px solid var(--border);white-space:nowrap;">יעד אישי</th>
             </tr>
           </thead>
@@ -1403,7 +1394,7 @@
         <div class="kpi-sub">ממוצע תקופה</div>
       </div>
       <div class="kpi"><div class="kpi-accent" style="background:#BA7517"></div>
-        <div class="kpi-lbl">אחוז סגירה</div>
+        <div class="kpi-lbl">פיריון שעתי</div>
         <div class="kpi-num" id="st_kpi_close">—</div>
         <div class="kpi-sub" id="st_kpi_close_sub"></div>
       </div>
@@ -1421,7 +1412,7 @@
         <div style="position:relative;width:100%;height:220px;"><canvas id="st_trend_chart" role="img" aria-label="גרף מגמת מכירות לאורך זמן">נתוני מגמה</canvas></div>
       </div>
       <div class="card">
-        <div class="card-hd"><div class="card-title">פילוח מכירות</div><div class="card-sub">לפי מקור</div></div>
+        <div class="card-hd"><div class="card-title">ימי עבודה</div><div class="card-sub">עבד לעומת לא עבד</div></div>
         <div style="position:relative;width:100%;height:155px;"><canvas id="st_donut_chart" role="img" aria-label="פילוח מכירות לפי מקור">פילוח</canvas></div>
         <div id="st_donut_legend" style="display:flex;flex-direction:column;gap:6px;margin-top:.75rem;"></div>
       </div>
@@ -1440,11 +1431,8 @@
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);">שיחות</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);">שעות</th>
               <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);">שיחות/שעה</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#0C447C;border-bottom:1px solid var(--border);">לידים</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#085041;border-bottom:1px solid var(--border);">חידושים</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:#3C3489;border-bottom:1px solid var(--border);">ק"ח</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);">סה"כ</th>
-              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--green-tx);border-bottom:1px solid var(--border);">% סגירה</th>
+              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);">סה"כ מכירות</th>
+              <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);">פיריון שעתי</th>
             </tr>
           </thead>
           <tbody id="st_daily_table"></tbody>
@@ -1956,10 +1944,13 @@ function calcRow(id) {
   const leads = gv(id,'leads'), renew = gv(id,'renew'), hmo = gv(id,'hmo');
   const cph = hours > 0 ? (calls/hours).toFixed(1) : '—';
   const tot = leads + renew + hmo;
+  const prod = hours > 0 ? (tot/hours).toFixed(1) : '—';
   const ce = document.getElementById('cph_'+id);
   const te = document.getElementById('total_'+id);
+  const pe = document.getElementById('productivity_'+id);
   if (ce) ce.textContent = cph;
   if (te) te.textContent = tot;
+  if (pe) pe.textContent = prod;
   calcAll();
 }
 
@@ -1975,6 +1966,11 @@ function calcAll() {
     if (hours > 0) { cphSum += calls/hours; cphCnt++; }
     checkMilestone(a.name, leads + renew + hmo);
   });
+  agents.forEach(a => {
+    const hours = gv(a.id,'hours'), tot = gv(a.id,'leads')+gv(a.id,'renew')+gv(a.id,'hmo');
+    const pe = document.getElementById('productivity_'+a.id);
+    if (pe) pe.textContent = hours > 0 ? (tot/hours).toFixed(1) : '—';
+  });
   const sTotal = sLeads + sRenew + sHmo;
   const avgCph = cphCnt > 0 ? (cphSum/cphCnt).toFixed(1) : '—';
 
@@ -1984,6 +1980,8 @@ function calcAll() {
   document.getElementById('s_total').textContent = sTotal || '—';
   document.getElementById('s_cph').textContent   = avgCph;
   document.getElementById('s_cph_note').textContent = cphCnt > 0 ? 'ממוצע' : '';
+  const sProdEl = document.getElementById('s_productivity');
+  if (sProdEl) sProdEl.textContent = sHours > 0 ? (sTotal/sHours).toFixed(1) : '—';
 
   // ── SALE SOUND + ANIMATION ──
   const prevTotal = window._prevTotal || 0;
@@ -2131,7 +2129,6 @@ function updateCharts(sorted, sLeads, sRenew, sHmo, sTotal) {
     const avBg   = AVATARBG[i % AVATARBG.length];
     const avTx   = AVATARTX[i % AVATARTX.length];
     const rc     = RANK_COLORS[i] || {bg:'var(--bg2)', tx:'var(--text3)'};
-    const leadsV = gv(a.id,'leads'), renewV = gv(a.id,'renew'), hmoV = gv(a.id,'hmo');
     const callsV = gv(a.id,'calls'), hoursV = gv(a.id,'hours');
     const cph    = hoursV > 0 ? (callsV/hoursV).toFixed(1) : '—';
     const isFirst = i === 0 && a.total > 0;
@@ -2167,10 +2164,8 @@ function updateCharts(sorted, sLeads, sRenew, sHmo, sTotal) {
       <td style="padding:10px;text-align:center;font-size:13px;font-weight:500;color:var(--text);">${callsV||'—'}</td>
       <td style="padding:10px;text-align:center;font-size:13px;font-weight:500;color:var(--text);">${hoursV||'—'}</td>
       <td style="padding:10px;text-align:center;font-size:13px;${cphStyle}">${cph}</td>
-      <td style="padding:10px;text-align:center;"><span style="background:#E6F1FB;color:#0C447C;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${leadsV}</span></td>
-      <td style="padding:10px;text-align:center;"><span style="background:#E1F5EE;color:#085041;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${renewV}</span></td>
-      <td style="padding:10px;text-align:center;"><span style="background:#EEEDFE;color:#3C3489;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${hmoV}</span></td>
       <td style="padding:10px 14px;text-align:center;${totalStyle}">${a.total}</td>
+      <td style="padding:10px;text-align:center;font-size:13px;font-weight:600;color:var(--text);">${hoursV>0?(a.total/hoursV).toFixed(1):'—'}</td>
       <td style="padding:10px 14px;text-align:center;">${goalCell}</td>
     </tr>`;
   });
@@ -2193,10 +2188,8 @@ function updateCharts(sorted, sLeads, sRenew, sHmo, sTotal) {
     <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text);">${totalCalls||'—'}</td>
     <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text);">${totalHours||'—'}</td>
     <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--blue);">${avgCphAll}</td>
-    <td style="padding:10px;text-align:center;"><span style="background:#E6F1FB;color:#0C447C;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${totalLeads}</span></td>
-    <td style="padding:10px;text-align:center;"><span style="background:#E1F5EE;color:#085041;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${totalRenew}</span></td>
-    <td style="padding:10px;text-align:center;"><span style="background:#EEEDFE;color:#3C3489;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;">${totalHmo}</span></td>
     <td style="padding:10px 14px;text-align:center;font-size:16px;font-weight:800;color:var(--blue);">${totalSales}</td>
+    <td style="padding:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text);">${totalHours>0?(totalSales/totalHours).toFixed(1):'—'}</td>
     <td style="padding:10px 14px;text-align:center;font-size:11px;color:var(--text3);">—</td>
   </tr>`;
 }
@@ -2214,6 +2207,7 @@ function renderTable() {
       <td class="calc-cell" id="cph_${a.id}">—</td>
       <td><input class="num-input" type="number" min="0" id="leads_${a.id}" value="" placeholder="0" oninput="calcRow(${a.id})" /></td>
       <td class="total-cell" id="total_${a.id}">0</td>
+      <td class="calc-cell" id="productivity_${a.id}">—</td>
       <td><input class="num-input" type="number" min="0" id="goal_${a.id}" value="${a.goal||''}" oninput="calcAll()" style="width:56px;" placeholder="יעד" /></td>
       <td><select id="status_${a.id}" onchange="calcAll()" style="font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);width:68px;">
         <option value="active">פעיל</option>
@@ -2579,12 +2573,8 @@ async function loadStats() {
     const sumSales  = rows.reduce((s,r)=>s+r.total_sales,0);
     const sumCalls  = rows.reduce((s,r)=>s+r.calls,0);
     const sumHours  = rows.reduce((s,r)=>s+r.hours,0);
-    const sumLeads  = rows.reduce((s,r)=>s+r.leads,0);
-    const sumRenew  = rows.reduce((s,r)=>s+r.renewals,0);
-    const sumHmo    = rows.reduce((s,r)=>s+r.hmo,0);
-    const sumDailyL = rows.reduce((s,r)=>s+r.daily_leads,0);
     const avgCph    = sumHours > 0 ? (sumCalls/sumHours).toFixed(1) : '—';
-    const closeRate = sumDailyL > 0 ? ((sumLeads/sumDailyL)*100).toFixed(1)+'%' : '—';
+    const productivity = sumHours > 0 ? (sumSales/sumHours).toFixed(1) : '—';
 
     const disp = v => isAvg ? (v/totalDays).toFixed(1) : v;
 
@@ -2593,8 +2583,8 @@ async function loadStats() {
     document.getElementById('st_kpi_calls').textContent     = disp(sumCalls);
     document.getElementById('st_kpi_calls_sub').textContent = isAvg ? 'ממוצע יומי' : 'סה"כ';
     document.getElementById('st_kpi_cph').textContent       = avgCph;
-    document.getElementById('st_kpi_close').textContent     = closeRate;
-    document.getElementById('st_kpi_close_sub').textContent = isAvg ? 'ממוצע תקופה' : sumLeads+' מתוך '+sumDailyL;
+    document.getElementById('st_kpi_close').textContent     = productivity;
+    document.getElementById('st_kpi_close_sub').textContent = isAvg ? 'ממוצע תקופה' : 'מכירות לשעה';
 
     // Trend chart — exclude Fri(5)/Sat(6) AND days where agent didn't work (all zeros)
     const workRows = rows.filter(r => {
@@ -2664,21 +2654,23 @@ async function loadStats() {
       }
     });
 
-    // Donut
-    const dData   = [sumLeads, sumRenew, sumHmo];
-    const dColors = ['#185FA5','#1D9E75','#7F77DD'];
+    // Donut — worked days vs. not-worked days over the period
+    const workedDaysCount = workRows.filter(r => r.total_sales > 0 || r.calls > 0 || r.hours > 0).length;
+    const offDaysCount    = workRows.length - workedDaysCount;
+    const dData   = [workedDaysCount, offDaysCount];
+    const dColors = ['#185FA5', isDk ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.1)'];
     const emptyC  = isDk ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)';
-    const hasD    = sumSales > 0;
+    const hasD    = workRows.length > 0;
     if (stDonutInst) { stDonutInst.destroy(); stDonutInst = null; }
     stDonutInst = new Chart(document.getElementById('st_donut_chart'), {
       type:'doughnut',
-      data:{labels:['לידים','חידושים','קופות חולים'],datasets:[{data:hasD?dData:[1],backgroundColor:hasD?dColors:[emptyC],borderWidth:0,hoverOffset:4}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:ctx=>ctx.label+': '+ctx.parsed+(sumSales>0?' ('+Math.round(ctx.parsed/sumSales*100)+'%)':'')}}}}
+      data:{labels:['ימי עבודה','ימים ללא עבודה'],datasets:[{data:hasD?dData:[1],backgroundColor:hasD?dColors:[emptyC],borderWidth:0,hoverOffset:4}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:ctx=>ctx.label+': '+ctx.parsed+(workRows.length>0?' ('+Math.round(ctx.parsed/workRows.length*100)+'%)':'')}}}}
     });
     const leg = document.getElementById('st_donut_legend');
     leg.innerHTML = '';
-    [{l:'לידים',c:'#185FA5',v:sumLeads},{l:'חידושים',c:'#1D9E75',v:sumRenew},{l:'קופות חולים',c:'#7F77DD',v:sumHmo}].forEach(item=>{
-      const p = sumSales > 0 ? Math.round(item.v/sumSales*100)+'%' : '0%';
+    [{l:'ימי עבודה',c:'#185FA5',v:workedDaysCount},{l:'ימים ללא עבודה',c:dColors[1],v:offDaysCount}].forEach(item=>{
+      const p = workRows.length > 0 ? Math.round(item.v/workRows.length*100)+'%' : '0%';
       leg.innerHTML += `<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;"><div style="display:flex;align-items:center;gap:7px;color:var(--text2);"><span style="width:9px;height:9px;border-radius:2px;background:${item.c};display:inline-block;"></span>${item.l}</div><div style="display:flex;gap:8px;align-items:center;"><span style="font-size:11px;color:var(--text3);">${p}</span><span style="font-weight:600;color:var(--text);">${item.v}</span></div></div>`;
     });
 
@@ -2692,14 +2684,14 @@ async function loadStats() {
       if (dow === 5 || dow === 6) return; // skip Friday & Saturday
       const didWork = r.total_sales > 0 || r.calls > 0 || r.hours > 0;
       const cph = r.hours > 0 ? (r.calls/r.hours).toFixed(1) : '—';
-      const cr  = r.daily_leads > 0 ? ((r.leads/r.daily_leads)*100).toFixed(0)+'%' : '—';
+      const productivityDay = r.hours > 0 ? (r.total_sales/r.hours).toFixed(1) : '—';
       const rowBg = rowIdx%2===1 ? 'background:var(--bg2);' : '';
       rowIdx++;
       const dStr = d.toLocaleDateString('he-IL',{weekday:'short',day:'numeric',month:'numeric'});
       if (!didWork) {
         tbody.innerHTML += `<tr style="${rowBg}border-bottom:1px solid var(--border);">
           <td style="padding:9px 14px;font-size:13px;font-weight:500;color:var(--text);">${dStr}</td>
-          <td colspan="8" style="padding:9px 14px;text-align:center;">
+          <td colspan="5" style="padding:9px 14px;text-align:center;">
             <span style="background:var(--red-bg);color:var(--red-tx);font-size:12px;font-weight:700;padding:3px 14px;border-radius:99px;">לא עבד</span>
           </td>
         </tr>`;
@@ -2710,11 +2702,8 @@ async function loadStats() {
         <td style="padding:9px 10px;text-align:center;font-size:13px;color:var(--text);">${r.calls}</td>
         <td style="padding:9px 10px;text-align:center;font-size:13px;color:var(--text);">${r.hours}</td>
         <td style="padding:9px 10px;text-align:center;font-size:13px;color:var(--text);">${cph}</td>
-        <td style="padding:9px 10px;text-align:center;"><span style="background:#E6F1FB;color:#0C447C;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;">${r.leads}</span></td>
-        <td style="padding:9px 10px;text-align:center;"><span style="background:#E1F5EE;color:#085041;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;">${r.renewals}</span></td>
-        <td style="padding:9px 10px;text-align:center;"><span style="background:#EEEDFE;color:#3C3489;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;">${r.hmo}</span></td>
         <td style="padding:9px 10px;text-align:center;font-size:14px;font-weight:700;color:var(--blue);">${r.total_sales}</td>
-        <td style="padding:9px 10px;text-align:center;font-size:13px;font-weight:600;color:var(--green-tx);">${cr}</td>
+        <td style="padding:9px 10px;text-align:center;font-size:13px;font-weight:600;color:var(--text);">${productivityDay}</td>
       </tr>`;
     });
 
@@ -3096,6 +3085,11 @@ function updateTV() {
         <span style="font-size:13px;">📞</span>
         <span style="font-size:12px;color:var(--text2);">סה"כ שיחות:</span>
         <span style="font-size:14px;font-weight:700;color:var(--text);">${gv(a.id,'calls')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding:5px 8px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <span style="font-size:13px;">⚡</span>
+        <span style="font-size:12px;color:var(--text2);">פיריון שעתי:</span>
+        <span style="font-size:14px;font-weight:700;color:var(--text);">${gv(a.id,'hours')>0?(a.total/gv(a.id,'hours')).toFixed(1):'—'}</span>
       </div>
       ${goalSection}
     </div>`;
