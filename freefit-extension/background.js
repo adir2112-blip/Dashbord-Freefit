@@ -12,6 +12,7 @@ const CX_AGENTS = {
   'רווית מורדכייב': '8234',
   'עדן ארבני':      '8271',
   'אריאל אזייב':    '8213',
+  'אבישג בן לולו':  '8291',
 };
 
 const SEYATA_BASE = 'https://syatacrm.co.il/S-TCFreeFit';
