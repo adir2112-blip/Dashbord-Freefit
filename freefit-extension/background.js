@@ -1,5 +1,11 @@
 // Background service worker
 
+// Local (machine) YYYY-MM-DD — NOT toISOString(), which is UTC and can be off
+// by a calendar day for a few hours around Israel midnight.
+function localDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 const CX_BASE = 'https://movement.3cx.eu:5001';
 const CX_USER = '1adirlev@targetcall.co.il';
 const CX_PASS = 't1YuBY2gKo';
@@ -35,7 +41,7 @@ async function syncSalesFromBackground() {
     const dateStr = today.getFullYear().toString() +
       String(today.getMonth()+1).padStart(2,'0') +
       String(today.getDate()).padStart(2,'0');
-    const todayStr = today.toISOString().slice(0, 10);
+    const todayStr = localDateStr(today);
 
     const res = await fetch(SEYATA_BASE + '/api/mn_Service_Requests?sr_StatusReason=2&sr_ResponseDate=' + dateStr + '&sr_change_date=' + dateStr + '&_limit=500', { credentials: 'include' });
     if (!res.ok) throw new Error('Seyata error: ' + res.status);
@@ -138,7 +144,7 @@ async function syncCallsFromBackground() {
     const from = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
     const fromStr = new Date(from.getTime()-3*3600000).toISOString();
     const toStr   = new Date(from.getTime()+21*3600000).toISOString();
-    const todayStr = today.toISOString().slice(0,10);
+    const todayStr = localDateStr(today);
 
     // Get existing rows to preserve sales
     const exRes = await fetch(SUPABASE_URL+'/rest/v1/daily_stats?date=eq.'+todayStr, {
@@ -296,8 +302,8 @@ async function midnightReset() {
     // Get yesterday's date (we're now in the new day)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().slice(0, 10);
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const yesterdayStr = localDateStr(yesterday);
+    const todayStr = localDateStr(new Date());
 
     console.log('[FreeFit] Midnight reset — clearing', todayStr, '(keeping', yesterdayStr, ')');
 
