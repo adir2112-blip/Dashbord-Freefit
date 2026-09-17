@@ -1882,6 +1882,12 @@ function doSwitchTab(tab) {
   if (ls) ls.style.display = 'none';
 })();
 
+// Local (machine) YYYY-MM-DD — NOT toISOString(), which is UTC and can be off
+// by a calendar day for a few hours around Israel midnight.
+function localDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 /* ── SUPABASE CONFIG ── */
 const SUPA_URL = 'https://fmejfxejsrmjvexfizgj.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtZWpmeGVqc3JtanZleGZpemdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjA1MjQsImV4cCI6MjA5MTkzNjUyNH0.A8Eu-3Uj-i06U0DsDt-pbGu1tQJXdjZaTyz797PsOEU';
@@ -2288,7 +2294,7 @@ async function saveToday() {
   const btn = document.getElementById('btn_save_today');
   const status = document.getElementById('stats_save_status');
   btn.disabled = true; btn.textContent = 'שומר...';
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr(new Date());
   const goal = parseInt(document.getElementById('goalInput').value)||0;
   // Check if there's actual data to save
   const hasRealData = agents.some(a =>
@@ -2338,8 +2344,8 @@ async function saveToday() {
 
 
 /* ── FORCED SAVE (bypasses zero check, used for scheduled 18:00 save) ── */
-async function saveTodayForced() {
-  const today = new Date().toISOString().slice(0,10);
+async function saveTodayForced(dateStr) {
+  const today = dateStr || localDateStr(new Date());
   try {
     await supaFetch('maof_daily_stats?date=eq.'+today, {method:'DELETE'});
     const rows = agents.map(a => ({
@@ -2367,14 +2373,17 @@ function scheduleMidnightReset() {
   const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 5); // 00:00:05
   const ms = midnight - now;
   setTimeout(async () => {
-    // 1. Save yesterday's data to Supabase before reset
-    await saveTodayForced();
+    // 1. Save yesterday's data to Supabase before reset — the local calendar
+    // day has already rolled over by the time this fires, so explicitly
+    // target the day that just ended rather than "today".
+    const closingDay = (function() {
+      const d = new Date(); d.setDate(d.getDate()-1);
+      return localDateStr(d);
+    })();
+    await saveTodayForced(closingDay);
     // 2. Delete TODAY's rows from Supabase (prepare for new day)
     try {
-      const todayStr = (function() {
-        const d = new Date();
-        return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-      })();
+      const todayStr = localDateStr(new Date());
       await supaFetch('maof_daily_stats?date=eq.'+todayStr, {method:'DELETE'});
       console.log('[Maof] Midnight: Supabase cleared for new day ✓');
     } catch(e) { console.warn('Midnight Supabase clear error:', e); }
@@ -2392,7 +2401,7 @@ function scheduleMidnightReset() {
     // 3. Remove yesterday's localStorage
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate()-1);
-    localStorage.removeItem('maof_today_'+yesterday.toISOString().slice(0,10));
+    localStorage.removeItem('maof_today_'+localDateStr(yesterday));
     // 4. Reset prevTotal so sale sound doesn't fire
     window._prevTotal = 0;
     calcAll();
@@ -2472,7 +2481,7 @@ async function deleteAgentData() {
     const today = new Date();
     let fromDate = '';
     if (range === 'today') {
-      fromDate = today.toISOString().slice(0,10);
+      fromDate = localDateStr(today);
     } else if (range === 'week') {
       const d = new Date(today); d.setDate(d.getDate()-6);
       fromDate = d.toISOString().slice(0,10);
@@ -2486,7 +2495,7 @@ async function deleteAgentData() {
     await supaFetch(path, {method:'DELETE'});
 
     // If today's data was deleted — also clear localStorage and reset inputs for that agent
-    const todayStr = today.toISOString().slice(0,10);
+    const todayStr = localDateStr(today);
     const isToday = !fromDate || fromDate <= todayStr;
     if (isToday) {
       const a = agents.find(x=>x.name===agentName);
@@ -2536,7 +2545,7 @@ async function loadStats() {
   const today = new Date();
   let fromDate, labelStr;
   if (period === 'today') {
-    fromDate = today.toISOString().slice(0,10); labelStr = 'היום';
+    fromDate = localDateStr(today); labelStr = 'היום';
   } else if (period === 'week') {
     const d = new Date(today); d.setDate(d.getDate()-6);
     fromDate = d.toISOString().slice(0,10); labelStr = '7 ימים אחרונים';
@@ -2720,7 +2729,7 @@ async function loadYesterdayDelta() {
   try {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate()-1);
-    const yDate = yesterday.toISOString().slice(0,10);
+    const yDate = localDateStr(yesterday);
     const rows = await supaFetch('maof_daily_stats?date=eq.'+yDate, {headers:{'Prefer':'return=representation'}});
     if (!rows || rows.length===0) return;
     const ySales = rows.reduce((s,r)=>s+r.total_sales,0);
@@ -2992,7 +3001,7 @@ async function renderGoals() {
 
 /* ── TV MODE ── */
 async function updateTVFromSupabase() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr(new Date());
   try {
     const rows = await supaFetch('maof_daily_stats?date=eq.'+today, {headers:{'Prefer':'return=representation'}});
     if (rows && rows.length > 0) {
@@ -3108,7 +3117,7 @@ function openEditHistory() {
     sel.appendChild(o);
   });
   const di = document.getElementById('edit_date');
-  di.value = new Date().toISOString().slice(0,10);
+  di.value = localDateStr(new Date());
   document.getElementById('edit_fields').style.display = 'none';
   document.getElementById('edit_status').textContent = '';
   modal.style.display = 'flex';
@@ -3913,7 +3922,7 @@ function saveTodayInputs() {
       status: (document.getElementById('status_'+a.id) ? document.getElementById('status_'+a.id).value : 'active'),
     }))
   };
-  localStorage.setItem('maof_today_'+new Date().toISOString().slice(0,10), JSON.stringify(data));
+  localStorage.setItem('maof_today_'+localDateStr(new Date()), JSON.stringify(data));
   debouncedSupaSave();
 }
 
@@ -3933,7 +3942,7 @@ function debouncedSupaSave() {
     });
     if (!hasData) return;
     try {
-      const today = new Date().toISOString().slice(0,10);
+      const today = localDateStr(new Date());
       await supaFetch('maof_daily_stats?date=eq.'+today, {method:'DELETE'});
       const rows = agents.map(a => ({
         date: today,
@@ -4017,7 +4026,7 @@ function resetDay() {
   });
   const dlEl = document.getElementById('dailyLeads');
   if (dlEl) dlEl.value = '0';
-  localStorage.removeItem('maof_today_'+new Date().toISOString().slice(0,10));
+  localStorage.removeItem('maof_today_'+localDateStr(new Date()));
   calcAll();
 }
 
@@ -4056,7 +4065,7 @@ async function exportPDF() {
   btn.textContent = origText; btn.disabled = false;
 }
 function restoreTodayInputs() {
-  const saved = localStorage.getItem('maof_today_'+new Date().toISOString().slice(0,10));
+  const saved = localStorage.getItem('maof_today_'+localDateStr(new Date()));
   if (!saved) return;
   try {
     const data = JSON.parse(saved);
@@ -4078,7 +4087,7 @@ document.addEventListener('input', () => {
 
 /* ── REAL-TIME SYNC — every 2 minutes ── */
 async function syncFromSupabase() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr(new Date());
   try {
     const rows = await supaFetch('maof_daily_stats?date=eq.'+today, {headers:{'Prefer':'return=representation'}});
     if (!rows || rows.length === 0) return;
@@ -4163,7 +4172,7 @@ scheduleMidnightReset();
 window.addEventListener('beforeunload', () => {
   if (agents.length > 0) {
     clearTimeout(_supaDebounce);
-    const today = new Date().toISOString().slice(0,10);
+    const today = localDateStr(new Date());
     const rows = agents.map(a => ({
       date: today, agent_name: a.name,
       calls:    parseInt(document.getElementById('calls_'+a.id)?.value)||0,
